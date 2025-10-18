@@ -20,11 +20,7 @@ typedef enum {
 } CONSTANT_Type;
 
 // Estrutura para uma constante do tipo Utf8
-typedef struct {
-    u2 length;
-    u1* bytes;
-} CONSTANT_Utf8_info;
-
+typedef struct { u2 length; u1* bytes; } CONSTANT_Utf8_info;
 // Novas estruturas para cada tipo de constante
 typedef struct { u2 name_index; } CONSTANT_Class_info;
 typedef struct { u2 string_index; } CONSTANT_String_info;
@@ -54,9 +50,12 @@ typedef struct {
     } info;
 } cp_info;
 
-// Declarações das funções (continuam as mesmas)
+// Declarações das funções
 void read_constant_pool(u2 count, cp_info** constant_pool, FILE* file);
 void print_constant_pool(u2 count, cp_info** constant_pool);
 void free_constant_pool(u2 count, cp_info** constant_pool);
+
+// NOVA DECLARAÇÃO para que outros arquivos possam usar esta função
+char* get_utf8_from_pool(u2 index, cp_info** constant_pool);
 
 #endif // CONSTANT_POOL_H

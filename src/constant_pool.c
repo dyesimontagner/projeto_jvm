@@ -91,6 +91,11 @@ void read_constant_pool(u2 count, cp_info** constant_pool, FILE* file) {
 
 // Função para obter Utf8 (sem alterações)
 char* get_utf8_from_pool(u2 index, cp_info** constant_pool) {
+    // CORREÇÃO: Adiciona uma verificação de segurança.
+    if (!constant_pool || !constant_pool[index]) {
+        return "<invalid_pool_or_index>";
+    }
+    // A linha original, agora segura:
     return (char*) constant_pool[index]->info.utf8_info.bytes;
 }
 
