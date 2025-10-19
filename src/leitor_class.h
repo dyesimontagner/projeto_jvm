@@ -5,12 +5,36 @@
 #include "constant_pool.h"
 #include <stdio.h>
 
-// As definições de attribute, field e method
+// Estrutura para a tabela de exceções dentro do atributo Code
+typedef struct {
+    u2 start_pc;
+    u2 end_pc;
+    u2 handler_pc;
+    u2 catch_type;
+} exception_table_entry;
+
+// ESTRUTURA PARA O ATRIBUTO "CODE"
+typedef struct {
+    u2 max_stack;
+    u2 max_locals;
+    u4 code_length;
+    u1* code; // O array de bytecodes!
+    u2 exception_table_length;
+    exception_table_entry* exception_table;
+    u2 attributes_count;
+    struct attribute_info* attributes; // Atributos podem ser aninhados
+} Code_attribute;
+
+// Estrutura genérica de atributo agora inclui um ponteiro para o Code_attribute
 typedef struct attribute_info {
     u2 attribute_name_index;
     u4 attribute_length;
-    u1* info;
+    union { // Usaremos uma union para armazenar ou os bytes brutos ou a estrutura Code
+        u1* info;
+        Code_attribute* code_info;
+    } attr_info;
 } attribute_info;
+
 
 typedef struct field_info {
     u2 access_flags;
