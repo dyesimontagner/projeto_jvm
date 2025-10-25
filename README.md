@@ -1,6 +1,6 @@
 #  Projeto JVM - Leitor/Exibidor .class
 
-Este é o projeto da disciplina de Software Básico do Departamento de Ciência da Computação da Universidade de Brasília, ministrada pelo Prof. Marcelo Ladeira.
+.
 
 O objetivo desta primeira fase é implementar um **Leitor/Exibidor** para arquivos `.class` Java. O programa é capaz de ler a estrutura binária de um arquivo `.class` e apresentar suas estruturas de forma legível, similar à ferramenta `jclasslib`.
 
