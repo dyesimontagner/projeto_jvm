@@ -1,4 +1,4 @@
-# Projeto JVM - Leitor/Exibidor .class
+# Leitor/Exibidor de Arquivo .class (Java)
 
 O objetivo desta primeira fase é implementar um **Leitor/Exibidor** para arquivos `.class` Java. O programa é capaz de ler a estrutura binária de um arquivo `.class` e apresentar suas estruturas de forma legível, similar às ferramentas `javap` e `jclasslib`.
 
@@ -37,3 +37,52 @@ Para compilar a versão principal do leitor-exibidor, execute na pasta raiz do p
 
 ```bash
 make
+```
+
+### 2. Como Usar o Leitor
+
+Primeiro, compile um arquivo Java de teste (ex: `Teste.java` fornecido na pasta `test_files`):
+
+```bash
+javac test_files/Teste.java
+```
+
+Em seguida, execute o leitor passando o arquivo `.class` como argumento:
+
+```bash
+./bin/leitor test_files/Teste.class
+```
+
+O programa exibirá as informações lidas do ficheiro `.class` no terminal.
+
+### 3. Análise de Código (Cppcheck e ASan)
+
+O `Makefile` está configurado para usar as ferramentas de análise exigidas.
+
+* **Análise Estática (Cppcheck):**
+    Para verificar o código em busca de erros estáticos e problemas de estilo, rode:
+
+    ```bash
+    make check
+    ```
+
+* **Análise Dinâmica (AddressSanitizer):**
+    Para compilar uma versão especial do programa que deteta erros de memória em tempo de execução (como fugas de memória ou *use-after-free*), rode:
+
+    ```bash
+    make asan
+    ```
+
+    Isso criará o executável `bin/leitor_asan`. Execute-o da mesma forma que o leitor normal:
+
+    ```bash
+    ./bin/leitor_asan test_files/Teste.class
+    ```
+
+### 4. Limpeza
+
+Para remover os arquivos compilados (executáveis), execute:
+
+```bash
+make clean
+```
