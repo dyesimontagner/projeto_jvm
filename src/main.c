@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "leitor_class.h"
+#include "leitor_class.h" // Inclui definições de estruturas e funções de leitura/free
+#include "exibidor.h"   // Inclui funções de exibição <<--- ADICIONADO
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -20,8 +21,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Chama a função para exibir as informações
-    print_class_file_info(class_file);
+    // Chama a função para exibir as informações (agora de exibidor.h/c)
+    print_class_file_info(class_file); // Declaração está em exibidor.h
 
     // Libera a memória alocada
     free_class_file(class_file);

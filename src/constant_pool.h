@@ -31,11 +31,10 @@ typedef struct { u4 bytes; } CONSTANT_Float_info;
 typedef struct { u4 high_bytes; u4 low_bytes; } CONSTANT_Long_info;
 typedef struct { u4 high_bytes; u4 low_bytes; } CONSTANT_Double_info;
 
-// Estrutura genérica para uma entrada do Constant Pool (com a union atualizada e corrigida)
+// Estrutura genérica para uma entrada do Constant Pool
 typedef struct {
     u1 tag;
     union {
-        // CORREÇÃO: Dando um nome de variável para cada tipo na union
         CONSTANT_Utf8_info           utf8_info;
         CONSTANT_Class_info          class_info;
         CONSTANT_String_info         string_info;
@@ -50,12 +49,10 @@ typedef struct {
     } info;
 } cp_info;
 
-// Declarações das funções
+// Declarações das funções de constant_pool.c
 void read_constant_pool(u2 count, cp_info** constant_pool, FILE* file);
-void print_constant_pool(u2 count, cp_info** constant_pool);
+void print_constant_pool(u2 count, cp_info** constant_pool); // Declarada aqui
 void free_constant_pool(u2 count, cp_info** constant_pool);
-
-// NOVA DECLARAÇÃO para que outros arquivos possam usar esta função
 char* get_utf8_from_pool(u2 index, cp_info** constant_pool);
 
 #endif // CONSTANT_POOL_H
