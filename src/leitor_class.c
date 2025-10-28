@@ -270,7 +270,7 @@ void free_attributes(u2 count, attribute_info* attributes, cp_info** cp) {
     if (!attributes || count == 0) return;
 
     u2 cp_count = 0;
-    ClassFile* cf_ptr = NULL;
+    const ClassFile* cf_ptr = NULL;
     if (cp) {
          // Tenta obter o cp_count a partir do ponteiro cp
         cf_ptr = (ClassFile*)((char*)cp - offsetof(ClassFile, constant_pool));

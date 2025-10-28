@@ -106,9 +106,9 @@ char* get_utf8_from_pool(u2 index, cp_info** constant_pool) {
     if (!constant_pool || !constant_pool[index] || constant_pool[index]->tag != CONSTANT_Utf8) {
         // Tenta obter o cp_count para verificar o índice
         u2 cp_count = 0;
-        ClassFile* cf_ptr = NULL;
+        const ClassFile* cf_ptr = NULL; // Adicionado const
         if(constant_pool) {
-            cf_ptr = (ClassFile*)((char*)constant_pool - offsetof(ClassFile, constant_pool));
+            cf_ptr = (const ClassFile*)((const char*)constant_pool - offsetof(ClassFile, constant_pool)); // Adicionado const
             if(cf_ptr) cp_count = cf_ptr->constant_pool_count;
         }
 

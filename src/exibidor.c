@@ -19,7 +19,7 @@ double get_double_from_bytes(u4 high_bytes, u4 low_bytes) {
     double d;
     uint64_t val = ((uint64_t)high_bytes << 32) | low_bytes;
     uint64_t swapped_val = 0;
-    u1* p_val = (u1*)&val;
+    const u1* p_val = (u1*)&val;
     u1* p_swapped = (u1*)&swapped_val;
     for(int i=0; i<8; ++i) {
         p_swapped[i] = p_val[7-i];
@@ -74,7 +74,7 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
     u4 pc = 0;
     u2 cp_count = 0;
      if (cp) {
-         ClassFile* cf_ptr = (ClassFile*)((char*)cp - offsetof(ClassFile, constant_pool));
+         const ClassFile* cf_ptr = (ClassFile*)((char*)cp - offsetof(ClassFile, constant_pool));
          if (cf_ptr) cp_count = cf_ptr->constant_pool_count;
      }
 
@@ -113,10 +113,10 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
                               printf(" // NameAndType");
                     // *** CORREÇÃO PARÊNTESES ***
                     } else if(((opcode_byte >= ifeq && opcode_byte <= jsr) || opcode_byte == ifnull || opcode_byte == ifnonnull) ) {
-                         printf(" (%d)", start_pc + (int16_t)index);
+                         printf(" (%d)", (int)(start_pc + (int16_t)index));
                     }
                 } else if((opcode_byte >= ifeq && opcode_byte <= jsr) || opcode_byte == ifnull || opcode_byte == ifnonnull ) {
-                     printf(" (%d)", start_pc + (int16_t)index);
+                     printf(" (%d)", (int)(start_pc + (int16_t)index));
                 }
                 pc += 2;
              } else if(opcode_byte == multianewarray){
@@ -131,7 +131,7 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
                  if (pc + 3 >= code_length) { printf(" (erro: fim inesperado do código)\n"); break; }
                  if (opcode_byte == goto_w || opcode_byte == jsr_w) {
                      int32_t offset = ((int32_t)code[pc] << 24) | ((int32_t)code[pc+1] << 16) | ((int32_t)code[pc+2] << 8) | code[pc+3];
-                     printf(" (%d)", start_pc + offset);
+                     printf(" (%d)", (int)(start_pc + offset));
                  } else {
                      u2 index = ((u2)code[pc] << 8) | code[pc + 1];
                      u1 count_or_zero1 = code[pc+2];
@@ -157,7 +157,7 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
                  if (pc + 3 >= code_length) { printf(" (erro: fim inesperado do código no default offset)\n"); break; }
                  int32_t default_offset = ((int32_t)code[pc] << 24) | ((int32_t)code[pc+1] << 16) | ((int32_t)code[pc+2] << 8) | code[pc+3];
                  pc += 4;
-                 printf("\n%s     default -> %d", indent, start_pc + default_offset);
+                 printf("\n%s     default -> %d", indent, (int)(start_pc + default_offset));
 
                  if (opcode_byte == tableswitch) {
                      if (pc + 7 >= code_length) { printf(" (erro: fim inesperado do código em low/high bytes)\n"); break; }
@@ -171,7 +171,7 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
                      for (int32_t i = 0; i < num_offsets; i++) {
                          int32_t offset = ((int32_t)code[pc] << 24) | ((int32_t)code[pc+1] << 16) | ((int32_t)code[pc+2] << 8) | code[pc+3];
                          pc += 4;
-                         printf("\n%s     %d -> %d", indent, low + i, start_pc + offset);
+                         printf("\n%s     %d -> %d", indent, low + i, (int)(start_pc + offset));
                      }
                  } else { // lookupswitch
                      if (pc + 3 >= code_length) { printf(" (erro: fim inesperado do código em npairs)\n"); break; }
@@ -184,7 +184,7 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
                          pc += 4;
                          int32_t offset = ((int32_t)code[pc] << 24) | ((int32_t)code[pc+1] << 16) | ((int32_t)code[pc+2] << 8) | code[pc+3];
                          pc += 4;
-                         printf("\n%s     %d -> %d", indent, match, start_pc + offset);
+                         printf("\n%s     %d -> %d", indent, match, (int)(start_pc + offset));
                      }
                  }
             } else if (opcode_byte == wide) {
@@ -214,12 +214,12 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
 
 
 // Exibe Atributos Específicos
-void print_source_file_attribute(SourceFile_attribute* attr, cp_info** cp) {
+void print_source_file_attribute(const SourceFile_attribute* attr, cp_info** cp) {
     if (!attr) return;
     printf("       SourceFile: cp_info #%u <%s>\n", attr->sourcefile_index, get_utf8_from_pool(attr->sourcefile_index, cp));
 }
 
-void print_line_number_table_attribute(LineNumberTable_attribute* attr) {
+void print_line_number_table_attribute(const LineNumberTable_attribute* attr) {
     if (!attr || attr->line_number_table_length == 0) return;
     printf("       LineNumberTable:\n");
     printf("         line\tpc\n");
@@ -233,7 +233,7 @@ void print_attributes(u2 count, attribute_info* attributes, cp_info** cp, const 
      if (!attributes || count == 0) return;
 
      u2 cp_count = 0;
-     ClassFile* cf_ptr = NULL;
+     const ClassFile* cf_ptr = NULL;
      if (cp) {
          cf_ptr = (ClassFile*)((char*)cp - offsetof(ClassFile, constant_pool));
          if (cf_ptr) cp_count = cf_ptr->constant_pool_count;
@@ -269,7 +269,7 @@ void print_attributes(u2 count, attribute_info* attributes, cp_info** cp, const 
                             code->exception_table[k].handler_pc);
                      if (code->exception_table[k].catch_type == 0) {
                          printf("any\n");
-                     } else if (cp && code->exception_table[k].catch_type > 0 && code->exception_table[k].catch_type < cp_count && cp[code->exception_table[k].catch_type] && cp[code->exception_table[k].catch_type]->tag == CONSTANT_Class) {
+                     } else if (cp  && code->exception_table[k].catch_type < cp_count && cp[code->exception_table[k].catch_type] && cp[code->exception_table[k].catch_type]->tag == CONSTANT_Class) {
                          printf("Class cp_info #%u <%s>\n", code->exception_table[k].catch_type,
                                 get_utf8_from_pool(cp[code->exception_table[k].catch_type]->info.class_info.name_index, cp));
                      } else {
@@ -330,7 +330,7 @@ void print_class_file_info(ClassFile* class_file) {
     }
     if (class_file->super_class == 0) {
          printf("Super class: cp_info #0 <N/A>\n");
-    } else if (cp && class_file->super_class > 0 && class_file->super_class < cp_size && cp[class_file->super_class] && cp[class_file->super_class]->tag == CONSTANT_Class) {
+    } else if (cp && class_file->super_class < cp_size && cp[class_file->super_class] && cp[class_file->super_class]->tag == CONSTANT_Class) {
         printf("Super class: cp_info #%u <%s>\n", class_file->super_class, get_utf8_from_pool(cp[class_file->super_class]->info.class_info.name_index, cp));
     } else {
         printf("Super class: cp_info #%u <invalid index or pool>\n", class_file->super_class);
