@@ -195,7 +195,7 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
                  u2 index = ((u2)code[pc] << 8) | code[pc + 1];
                  pc += 2;
                  // Verifica se next_opcode é válido antes de aceder à tabela
-                 const char* next_mnemonic = (next_opcode < 256 && instruction_table[next_opcode].mnemonic) ? instruction_table[next_opcode].mnemonic : "unknown_wide_opcode";
+                 const char* next_mnemonic = (instruction_table[next_opcode].mnemonic) ? instruction_table[next_opcode].mnemonic : "unknown_wide_opcode";
                  printf(" %s %u", next_mnemonic, index);
                  if (next_opcode == iinc) {
                      if (pc + 1 >= code_length) { printf(" (erro: fim inesperado do código na constante wide iinc)\n"); break; }
