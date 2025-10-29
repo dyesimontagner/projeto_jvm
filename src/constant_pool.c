@@ -102,26 +102,14 @@ void read_constant_pool(u2 count, cp_info** constant_pool, FILE* file) {
 }
 
 // Função para obter Utf8
-char* get_utf8_from_pool(u2 index, cp_info** constant_pool) {
-    if (!constant_pool || !constant_pool[index] || constant_pool[index]->tag != CONSTANT_Utf8) {
-        // Tenta obter o cp_count para verificar o índice
-        u2 cp_count = 0;
-        const ClassFile* cf_ptr = NULL; // Adicionado const
-        if(constant_pool) {
-            cf_ptr = (const ClassFile*)((const char*)constant_pool - offsetof(ClassFile, constant_pool)); // Adicionado const
-            if(cf_ptr) cp_count = cf_ptr->constant_pool_count;
-        }
-
-        if (!constant_pool) return "<invalid_pool>";
-        if (index == 0 || index >= cp_count) return "<invalid_index>";
-        if (!constant_pool[index]) return "<null_entry>";
-        if (constant_pool[index]->tag != CONSTANT_Utf8) return "<not_utf8>";
-
-        return "<unknown_error>"; // Caso algo inesperado ocorra
-    }
+char* get_utf8_from_pool(u2 index, cp_info** constant_pool, u2 cp_count) {
+    if (!constant_pool) return "<invalid_pool>";
+    if (index == 0 || index >= cp_count) return "<invalid_index>";
+    if (!constant_pool[index]) return "<null_entry>";
+    if (constant_pool[index]->tag != CONSTANT_Utf8) return "<not_utf8>";
+    
     return (char*) constant_pool[index]->info.utf8_info.bytes;
 }
-
 
 // Função de print
 void print_constant_pool(u2 count, cp_info** constant_pool) {
@@ -139,17 +127,17 @@ void print_constant_pool(u2 count, cp_info** constant_pool) {
                 printf("Utf8: %s\n", entry->info.utf8_info.bytes);
                 break;
             case CONSTANT_Class:
-                printf("Class: indice=#%u <%s>\n", entry->info.class_info.name_index, get_utf8_from_pool(entry->info.class_info.name_index, constant_pool));
+                printf("Class: indice=#%u <%s>\n", entry->info.class_info.name_index, get_utf8_from_pool(entry->info.class_info.name_index, constant_pool, count));
                 break;
             case CONSTANT_String:
-                printf("String: indice=#%u <%s>\n", entry->info.string_info.string_index, get_utf8_from_pool(entry->info.string_info.string_index, constant_pool));
+                printf("String: indice=#%u <%s>\n", entry->info.string_info.string_index, get_utf8_from_pool(entry->info.string_info.string_index, constant_pool, count));
                 break;
             case CONSTANT_Fieldref:
                  // Verifica se os índices são válidos antes de desreferenciar
                  if (entry->info.fieldref_info.class_index < count && constant_pool[entry->info.fieldref_info.class_index] && constant_pool[entry->info.fieldref_info.class_index]->tag == CONSTANT_Class) {
                     printf("Fieldref: class_indice=#%u <%s>, name_and_type_indice=#%u\n",
                            entry->info.fieldref_info.class_index,
-                           get_utf8_from_pool(constant_pool[entry->info.fieldref_info.class_index]->info.class_info.name_index, constant_pool),
+                           get_utf8_from_pool(constant_pool[entry->info.fieldref_info.class_index]->info.class_info.name_index, constant_pool, count),
                            entry->info.fieldref_info.name_and_type_index);
                  } else {
                     printf("Fieldref: class_indice=#%u <invalid>, name_and_type_indice=#%u\n", entry->info.fieldref_info.class_index, entry->info.fieldref_info.name_and_type_index);
@@ -159,7 +147,7 @@ void print_constant_pool(u2 count, cp_info** constant_pool) {
                  if (entry->info.methodref_info.class_index < count && constant_pool[entry->info.methodref_info.class_index] && constant_pool[entry->info.methodref_info.class_index]->tag == CONSTANT_Class) {
                     printf("Methodref: class_indice=#%u <%s>, name_and_type_indice=#%u\n",
                            entry->info.methodref_info.class_index,
-                           get_utf8_from_pool(constant_pool[entry->info.methodref_info.class_index]->info.class_info.name_index, constant_pool),
+                           get_utf8_from_pool(constant_pool[entry->info.methodref_info.class_index]->info.class_info.name_index, constant_pool, count),
                            entry->info.methodref_info.name_and_type_index);
                  } else {
                      printf("Methodref: class_indice=#%u <invalid>, name_and_type_indice=#%u\n", entry->info.methodref_info.class_index, entry->info.methodref_info.name_and_type_index);
@@ -169,7 +157,7 @@ void print_constant_pool(u2 count, cp_info** constant_pool) {
                   if (entry->info.interface_methodref_info.class_index < count && constant_pool[entry->info.interface_methodref_info.class_index] && constant_pool[entry->info.interface_methodref_info.class_index]->tag == CONSTANT_Class) {
                      printf("InterfaceMethodref: class_indice=#%u <%s>, name_and_type_indice=#%u\n",
                            entry->info.interface_methodref_info.class_index,
-                           get_utf8_from_pool(constant_pool[entry->info.interface_methodref_info.class_index]->info.class_info.name_index, constant_pool),
+                           get_utf8_from_pool(constant_pool[entry->info.interface_methodref_info.class_index]->info.class_info.name_index, constant_pool, count),
                            entry->info.interface_methodref_info.name_and_type_index);
                   } else {
                       printf("InterfaceMethodref: class_indice=#%u <invalid>, name_and_type_indice=#%u\n", entry->info.interface_methodref_info.class_index, entry->info.interface_methodref_info.name_and_type_index);
@@ -177,8 +165,10 @@ void print_constant_pool(u2 count, cp_info** constant_pool) {
                 break;
             case CONSTANT_NameAndType:
                 printf("NameAndType: name_indice=#%u <%s>, descriptor_indice=#%u <%s>\n",
-                    entry->info.name_and_type_info.name_index, get_utf8_from_pool(entry->info.name_and_type_info.name_index, constant_pool),
-                    entry->info.name_and_type_info.descriptor_index, get_utf8_from_pool(entry->info.name_and_type_info.descriptor_index, constant_pool));
+                    entry->info.name_and_type_info.name_index, 
+                    get_utf8_from_pool(entry->info.name_and_type_info.name_index, constant_pool, count), // Passe 'count'
+                    entry->info.name_and_type_info.descriptor_index, 
+                    get_utf8_from_pool(entry->info.name_and_type_info.descriptor_index, constant_pool, count)); // Passe 'count'
                 break;
             case CONSTANT_Integer:
                 printf("Integer: %d\n", (int32_t)entry->info.integer_info.bytes);

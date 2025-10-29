@@ -13,11 +13,11 @@ u4 swap_u4(u4 val) {
 }
 
 // Protótipos internos
-void read_fields(u2 count, field_info** fields, FILE* file, cp_info** cp);
-void read_methods(u2 count, method_info** methods, FILE* file, cp_info** cp);
+void read_fields(u2 count, field_info** fields, FILE* file, cp_info** cp, u2 cp_count);
+void read_methods(u2 count, method_info** methods, FILE* file, cp_info** cp, u2 cp_count);
 
 // --- Funções de Leitura de Atributos Específicos ---
-Code_attribute* read_code_attribute(FILE* file, cp_info** cp) {
+Code_attribute* read_code_attribute(FILE* file, cp_info** cp, u2 cp_count) {
     Code_attribute* code_attr = (Code_attribute*) calloc(1, sizeof(Code_attribute));
     if (!code_attr) { fprintf(stderr, "Erro de alocacao para Code attribute.\n"); return NULL; }
 
@@ -64,7 +64,7 @@ Code_attribute* read_code_attribute(FILE* file, cp_info** cp) {
 
     fread(&code_attr->attributes_count, sizeof(u2), 1, file);
     code_attr->attributes_count = swap_u2(code_attr->attributes_count);
-    read_attributes(code_attr->attributes_count, &code_attr->attributes, file, cp);
+    read_attributes(code_attr->attributes_count, &code_attr->attributes, file, cp, cp_count);
 
     return code_attr;
 }
@@ -104,7 +104,7 @@ LineNumberTable_attribute* read_line_number_table_attribute(FILE* file) {
 // --- Fim das Funções de Leitura de Atributos Específicos ---
 
 // Função para ler atributos
-void read_attributes(u2 count, attribute_info** attributes, FILE* file, cp_info** cp) {
+void read_attributes(u2 count, attribute_info** attributes, FILE* file, cp_info** cp, u2 cp_count) {
     if (count == 0) {
          *attributes = NULL;
          return;
@@ -120,12 +120,12 @@ void read_attributes(u2 count, attribute_info** attributes, FILE* file, cp_info*
         attr->attribute_length = swap_u4(attr->attribute_length);
 
         long current_pos = ftell(file);
-        const char* attr_name = get_utf8_from_pool(attr->attribute_name_index, cp);
+        const char* attr_name = get_utf8_from_pool(attr->attribute_name_index, cp, cp_count);
 
         memset(&attr->attr_info, 0, sizeof(attr->attr_info)); // Zera a union
 
         if (strcmp(attr_name, "Code") == 0) {
-            attr->attr_info.code_info = read_code_attribute(file, cp);
+            attr->attr_info.code_info = read_code_attribute(file, cp, cp_count);
         } else if (strcmp(attr_name, "SourceFile") == 0) {
              attr->attr_info.source_file_info = read_source_file_attribute(file);
         } else if (strcmp(attr_name, "LineNumberTable") == 0) {
@@ -153,7 +153,7 @@ void read_attributes(u2 count, attribute_info** attributes, FILE* file, cp_info*
 
 
 // Funções read_fields e read_methods
-void read_fields(u2 count, field_info** fields, FILE* file, cp_info** cp) {
+void read_fields(u2 count, field_info** fields, FILE* file, cp_info** cp, u2 cp_count) {
     if (count == 0) { *fields = NULL; return; }
     *fields = (field_info*) calloc(count, sizeof(field_info));
     if (!*fields) { fprintf(stderr, "Erro de alocacao para fields array.\n"); return; }
@@ -167,11 +167,11 @@ void read_fields(u2 count, field_info** fields, FILE* file, cp_info** cp) {
         (*fields)[i].descriptor_index = swap_u2((*fields)[i].descriptor_index);
         fread(&(*fields)[i].attributes_count, sizeof(u2), 1, file);
         (*fields)[i].attributes_count = swap_u2((*fields)[i].attributes_count);
-        read_attributes((*fields)[i].attributes_count, &(*fields)[i].attributes, file, cp);
+        read_attributes((*fields)[i].attributes_count, &(*fields)[i].attributes, file, cp, cp_count);
     }
 }
 
-void read_methods(u2 count, method_info** methods, FILE* file, cp_info** cp) {
+void read_methods(u2 count, method_info** methods, FILE* file, cp_info** cp, u2 cp_count) {
     if (count == 0) { *methods = NULL; return; }
     *methods = (method_info*) calloc(count, sizeof(method_info));
     if (!*methods) { fprintf(stderr, "Erro de alocacao para methods array.\n"); return; }
@@ -185,7 +185,7 @@ void read_methods(u2 count, method_info** methods, FILE* file, cp_info** cp) {
         (*methods)[i].descriptor_index = swap_u2((*methods)[i].descriptor_index);
         fread(&(*methods)[i].attributes_count, sizeof(u2), 1, file);
         (*methods)[i].attributes_count = swap_u2((*methods)[i].attributes_count);
-        read_attributes((*methods)[i].attributes_count, &(*methods)[i].attributes, file, cp);
+        read_attributes((*methods)[i].attributes_count, &(*methods)[i].attributes, file, cp, cp_count);
     }
 }
 
@@ -243,15 +243,15 @@ ClassFile* read_class_file(const char* filename) {
 
     if (read_status == 0 && fread(&class_file->fields_count, sizeof(u2), 1, file) != 1) read_status = 13;
     class_file->fields_count = swap_u2(class_file->fields_count);
-    if (read_status == 0) read_fields(class_file->fields_count, &class_file->fields, file, class_file->constant_pool);
+    if (read_status == 0) read_fields(class_file->fields_count, &class_file->fields, file, class_file->constant_pool, cp_count);
 
     if (read_status == 0 && fread(&class_file->methods_count, sizeof(u2), 1, file) != 1) read_status = 14;
     class_file->methods_count = swap_u2(class_file->methods_count);
-    if (read_status == 0) read_methods(class_file->methods_count, &class_file->methods, file, class_file->constant_pool);
+    if (read_status == 0) read_methods(class_file->methods_count, &class_file->methods, file, class_file->constant_pool, cp_count);
 
     if (read_status == 0 && fread(&class_file->attributes_count, sizeof(u2), 1, file) != 1) read_status = 15;
     class_file->attributes_count = swap_u2(class_file->attributes_count);
-    if (read_status == 0) read_attributes(class_file->attributes_count, &class_file->attributes, file, class_file->constant_pool);
+    if (read_status == 0) read_attributes(class_file->attributes_count, &class_file->attributes, file, class_file->constant_pool, cp_count);
 
     fclose(file);
 
@@ -266,21 +266,13 @@ ClassFile* read_class_file(const char* filename) {
 }
 
 // --- Funções de Liberação de Memória ---
-void free_attributes(u2 count, attribute_info* attributes, cp_info** cp) {
+void free_attributes(u2 count, attribute_info* attributes, cp_info** cp, u2 cp_count) {
     if (!attributes || count == 0) return;
-
-    u2 cp_count = 0;
-    const ClassFile* cf_ptr = NULL;
-    if (cp) {
-         // Tenta obter o cp_count a partir do ponteiro cp
-        cf_ptr = (ClassFile*)((char*)cp - offsetof(ClassFile, constant_pool));
-        if (cf_ptr) cp_count = cf_ptr->constant_pool_count;
-    }
 
     for (int i = 0; i < count; i++) {
         const char* attr_name = "<unknown_or_invalid_cp>";
         if (cp_count > 0 && attributes[i].attribute_name_index > 0 && attributes[i].attribute_name_index < cp_count && cp[attributes[i].attribute_name_index]) {
-           attr_name = get_utf8_from_pool(attributes[i].attribute_name_index, cp);
+           attr_name = get_utf8_from_pool(attributes[i].attribute_name_index, cp, cp_count);
         }
 
         if (strcmp(attr_name, "Code") == 0) {
@@ -288,7 +280,7 @@ void free_attributes(u2 count, attribute_info* attributes, cp_info** cp) {
             if (code) {
                 if (code->code) free(code->code);
                 if (code->exception_table) free(code->exception_table);
-                free_attributes(code->attributes_count, code->attributes, cp);
+                free_attributes(code->attributes_count, code->attributes, cp, cp_count);
                 free(code);
             }
         } else if (strcmp(attr_name, "SourceFile") == 0) {
@@ -309,18 +301,18 @@ void free_attributes(u2 count, attribute_info* attributes, cp_info** cp) {
     free(attributes);
 }
 
-void free_fields(u2 count, field_info* fields, cp_info** cp) {
+void free_fields(u2 count, field_info* fields, cp_info** cp, u2 cp_count) {
     if (!fields || count == 0) return;
     for (int i = 0; i < count; i++) {
-        free_attributes(fields[i].attributes_count, fields[i].attributes, cp);
+        free_attributes(fields[i].attributes_count, fields[i].attributes, cp, cp_count);
     }
     free(fields);
 }
 
-void free_methods(u2 count, method_info* methods, cp_info** cp) {
+void free_methods(u2 count, method_info* methods, cp_info** cp, u2 cp_count) {
     if (!methods || count == 0) return;
     for (int i = 0; i < count; i++) {
-        free_attributes(methods[i].attributes_count, methods[i].attributes, cp);
+        free_attributes(methods[i].attributes_count, methods[i].attributes, cp, cp_count);
     }
     free(methods);
 }
@@ -330,9 +322,9 @@ void free_class_file(ClassFile* class_file) {
         cp_info** cp = class_file->constant_pool;
         u2 cp_count = class_file->constant_pool_count;
 
-        free_fields(class_file->fields_count, class_file->fields, cp);
-        free_methods(class_file->methods_count, class_file->methods, cp);
-        free_attributes(class_file->attributes_count, class_file->attributes, cp);
+        free_fields(class_file->fields_count, class_file->fields, cp, cp_count);
+        free_methods(class_file->methods_count, class_file->methods, cp, cp_count);
+        free_attributes(class_file->attributes_count, class_file->attributes, cp, cp_count);
 
         if (cp) free_constant_pool(cp_count, cp);
         if (class_file->interfaces) free(class_file->interfaces);

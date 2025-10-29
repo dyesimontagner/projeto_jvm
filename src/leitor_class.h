@@ -72,15 +72,15 @@ typedef struct ClassFile {
 
 // --- DECLARAÇÕES DE FUNÇÕES DE LEITURA E LIBERAÇÃO ---
 ClassFile* read_class_file(const char* filename);
-void read_attributes(u2 count, attribute_info** attributes, FILE* file, cp_info** cp);
-Code_attribute* read_code_attribute(FILE* file, cp_info** cp);
+void read_attributes(u2 count, attribute_info** attributes, FILE* file, cp_info** cp, u2 cp_count);
+Code_attribute* read_code_attribute(FILE* file, cp_info** cp, u2 cp_count);
 SourceFile_attribute* read_source_file_attribute(FILE* file);
 LineNumberTable_attribute* read_line_number_table_attribute(FILE* file);
 
 void free_class_file(ClassFile* class_file);
-void free_attributes(u2 count, attribute_info* attributes, cp_info** cp);
-void free_fields(u2 count, field_info* fields, cp_info** cp);
-void free_methods(u2 count, method_info* methods, cp_info** cp);
+void free_attributes(u2 count, attribute_info* attributes, cp_info** cp, u2 cp_count);
+void free_fields(u2 count, field_info* fields, cp_info** cp, u2 cp_count);
+void free_methods(u2 count, method_info* methods, cp_info** cp, u2 cp_count);
 
 // Funções swap (podem ficar aqui ou em common.h/c)
 u2 swap_u2(u2 val);

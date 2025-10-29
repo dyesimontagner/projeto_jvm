@@ -11,10 +11,10 @@
 void print_class_file_info(ClassFile* class_file);
 
 // Funções auxiliares de exibição
-void print_attributes(u2 count, attribute_info* attributes, cp_info** cp, const char* indent);
-void print_source_file_attribute(const SourceFile_attribute* attr, cp_info** cp);
+void print_attributes(u2 count, attribute_info* attributes, cp_info** cp, u2 cp_count, const char* indent);
+void print_source_file_attribute(const SourceFile_attribute* attr, cp_info** cp, u2 cp_count);
 void print_line_number_table_attribute(const LineNumberTable_attribute* attr);
-void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* indent);
+void print_instructions(u1* code, u4 code_length, cp_info** cp, u2 cp_count, const char* indent);
 void print_constant_pool(u2 count, cp_info** constant_pool); // Mover declaração de constant_pool.h para cá? Ou deixar lá? Melhor deixar em constant_pool.h por enquanto.
 
 // Funções utilitárias de exibição

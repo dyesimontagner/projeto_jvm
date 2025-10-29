@@ -53,6 +53,6 @@ typedef struct {
 void read_constant_pool(u2 count, cp_info** constant_pool, FILE* file);
 void print_constant_pool(u2 count, cp_info** constant_pool); // Declarada aqui
 void free_constant_pool(u2 count, cp_info** constant_pool);
-char* get_utf8_from_pool(u2 index, cp_info** constant_pool);
+char* get_utf8_from_pool(u2 index, cp_info** constant_pool, u2 cp_count);
 
 #endif // CONSTANT_POOL_H

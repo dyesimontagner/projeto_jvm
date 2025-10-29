@@ -70,13 +70,8 @@ const char* get_access_flags_string(u2 flags, FlagType type) {
 }
 
 // Exibe Bytecode
-void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* indent) {
+void print_instructions(u1* code, u4 code_length, cp_info** cp, u2 cp_count, const char* indent) {
     u4 pc = 0;
-    u2 cp_count = 0;
-     if (cp) {
-         const ClassFile* cf_ptr = (ClassFile*)((char*)cp - offsetof(ClassFile, constant_pool));
-         if (cf_ptr) cp_count = cf_ptr->constant_pool_count;
-     }
 
     printf("%sBytecode:\n", indent);
     while (pc < code_length) {
@@ -91,32 +86,49 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
             if (opcode_byte == bipush || opcode_byte == newarray || opcode_byte == ret) {
                 printf(" %d", (int8_t)code[pc]);
                 pc += 1;
+            } else if (opcode_byte == ldc) {
+                 u1 index = code[pc];
+                 printf(" #%u", index);
+                 if (cp && index > 0 && index < cp_count && cp[index]) {
+                     if(cp[index]->tag == CONSTANT_String)
+                         printf(" // String \"%s\"", get_utf8_from_pool(cp[index]->info.string_info.string_index, cp, cp_count));
+                     else if (cp[index]->tag == CONSTANT_Class)
+                         printf(" // class %s", get_utf8_from_pool(cp[index]->info.class_info.name_index, cp, cp_count));
+                     else if (cp[index]->tag == CONSTANT_Integer || cp[index]->tag == CONSTANT_Float)
+                         printf(" // const");
+                 }
+                 pc += 1;
             } else if (opcode_byte == iinc) {
                  printf(" %u, %d", code[pc], (int8_t)code[pc + 1]);
                  pc += 2;
             } else if (opcode_byte == sipush || info->num_operands == 2) {
                 if (pc + 1 >= code_length) { printf(" (erro: fim inesperado do código)\n"); break; }
                 u2 index = ((u2)code[pc] << 8) | code[pc + 1];
-                printf(" #%u", index);
-                if (cp && index > 0 && index < cp_count) {
-                    // *** CORREÇÃO PARÊNTESES ***
-                    if (((opcode_byte >= ldc_w && opcode_byte <= putfield) ||
-                         (opcode_byte >= invokespecial && opcode_byte <= invokestatic) ||
-                         opcode_byte == new_ || opcode_byte == anewarray || opcode_byte == checkcast || opcode_byte == instanceof_) ) {
-                         if(cp[index] && cp[index]->tag == CONSTANT_Class)
-                             printf(" // class %s", get_utf8_from_pool(cp[index]->info.class_info.name_index, cp));
-                         else if (cp[index] && cp[index]->tag == CONSTANT_String)
-                             printf(" // String \"%s\"", get_utf8_from_pool(cp[index]->info.string_info.string_index, cp));
-                         else if (cp[index] && (cp[index]->tag == CONSTANT_Fieldref || cp[index]->tag == CONSTANT_Methodref || cp[index]->tag == CONSTANT_InterfaceMethodref))
-                             printf(" // ref");
-                         else if (cp[index] && cp[index]->tag == CONSTANT_NameAndType)
-                              printf(" // NameAndType");
-                    // *** CORREÇÃO PARÊNTESES ***
-                    } else if(((opcode_byte >= ifeq && opcode_byte <= jsr) || opcode_byte == ifnull || opcode_byte == ifnonnull) ) {
-                         printf(" (%d)", (int)(start_pc + (int16_t)index));
+                // Bloco 1: Opcodes que são BRANCHES (usam offset)
+                if ((opcode_byte >= ifeq && opcode_byte <= jsr) || opcode_byte == ifnull || opcode_byte == ifnonnull) {
+                    printf(" (%d)", (int)(start_pc + (int16_t)index));
+                } 
+                // Bloco 2: Opcodes que são ÍNDICES DO CP (ou valores, como sipush)
+                else {
+                    printf(" #%u", index); // sipush imprimirá seu valor como #
+
+                    // Imprime comentários APENAS para os que são índices do CP
+                    if (cp && index > 0 && index < cp_count && cp[index]) {
+                        if (((opcode_byte >= ldc_w && opcode_byte <= putfield) ||
+                             (opcode_byte >= invokespecial && opcode_byte <= invokestatic) ||
+                             opcode_byte == new_ || opcode_byte == anewarray || 
+                             opcode_byte == checkcast || opcode_byte == instanceof_)) 
+                        {
+                            if (cp[index]->tag == CONSTANT_Class)
+                                printf(" // class %s", get_utf8_from_pool(cp[index]->info.class_info.name_index, cp, cp_count));
+                            else if (cp[index]->tag == CONSTANT_String)
+                                printf(" // String \"%s\"", get_utf8_from_pool(cp[index]->info.string_info.string_index, cp, cp_count));
+                            else if (cp[index]->tag == CONSTANT_Fieldref || cp[index]->tag == CONSTANT_Methodref || cp[index]->tag == CONSTANT_InterfaceMethodref)
+                                printf(" // ref");
+                            else if (cp[index]->tag == CONSTANT_NameAndType)
+                                 printf(" // NameAndType");
+                        }
                     }
-                } else if((opcode_byte >= ifeq && opcode_byte <= jsr) || opcode_byte == ifnull || opcode_byte == ifnonnull ) {
-                     printf(" (%d)", (int)(start_pc + (int16_t)index));
                 }
                 pc += 2;
              } else if(opcode_byte == multianewarray){
@@ -125,7 +137,7 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
                   u1 dim = code[pc+2];
                   printf(" #%u dim %u", index, dim);
                   if (cp && index > 0 && index < cp_count && cp[index] && cp[index]->tag == CONSTANT_Class)
-                       printf(" // class %s", get_utf8_from_pool(cp[index]->info.class_info.name_index, cp));
+                       printf(" // class %s", get_utf8_from_pool(cp[index]->info.class_info.name_index, cp, cp_count));
                   pc += 3;
              } else if (opcode_byte == invokeinterface || opcode_byte == invokedynamic || opcode_byte == goto_w || opcode_byte == jsr_w) {
                  if (pc + 3 >= code_length) { printf(" (erro: fim inesperado do código)\n"); break; }
@@ -212,11 +224,11 @@ void print_instructions(u1* code, u4 code_length, cp_info** cp, const char* inde
     }
 }
 
-
+// talvez alterar essa dps
 // Exibe Atributos Específicos
-void print_source_file_attribute(const SourceFile_attribute* attr, cp_info** cp) {
+void print_source_file_attribute(const SourceFile_attribute* attr, cp_info** cp, u2 cp_count) { // <-- 1. Adicione o parâmetro
     if (!attr) return;
-    printf("       SourceFile: cp_info #%u <%s>\n", attr->sourcefile_index, get_utf8_from_pool(attr->sourcefile_index, cp));
+    printf("       SourceFile: cp_info #%u <%s>\n", attr->sourcefile_index, get_utf8_from_pool(attr->sourcefile_index, cp, cp_count));
 }
 
 void print_line_number_table_attribute(const LineNumberTable_attribute* attr) {
@@ -229,21 +241,14 @@ void print_line_number_table_attribute(const LineNumberTable_attribute* attr) {
 }
 
 // Função recursiva para exibir atributos
-void print_attributes(u2 count, attribute_info* attributes, cp_info** cp, const char* indent) {
+void print_attributes(u2 count, attribute_info* attributes, cp_info** cp, u2 cp_count, const char* indent) {
      if (!attributes || count == 0) return;
-
-     u2 cp_count = 0;
-     const ClassFile* cf_ptr = NULL;
-     if (cp) {
-         cf_ptr = (ClassFile*)((char*)cp - offsetof(ClassFile, constant_pool));
-         if (cf_ptr) cp_count = cf_ptr->constant_pool_count;
-     }
 
      for (int i = 0; i < count; i++) {
          attribute_info* attr = &attributes[i];
          const char* attr_name = "<invalid_name_index>";
          if (cp && attr->attribute_name_index > 0 && attr->attribute_name_index < cp_count && cp[attr->attribute_name_index]) {
-            attr_name = get_utf8_from_pool(attr->attribute_name_index, cp);
+            attr_name = get_utf8_from_pool(attr->attribute_name_index, cp, cp_count);
          }
          printf("%sAttribute: %s (length: %u)\n", indent, attr_name, attr->attribute_length);
 
@@ -256,7 +261,7 @@ void print_attributes(u2 count, attribute_info* attributes, cp_info** cp, const 
              printf("%s  max_stack=%u, max_locals=%u, code_length=%u\n", next_indent, code->max_stack, code->max_locals, code->code_length);
 
              if (code->code && code->code_length > 0) {
-                 print_instructions(code->code, code->code_length, cp, next_indent);
+                 print_instructions(code->code, code->code_length, cp, cp_count, next_indent);
              }
 
              if (code->exception_table_length > 0 && code->exception_table) {
@@ -271,7 +276,7 @@ void print_attributes(u2 count, attribute_info* attributes, cp_info** cp, const 
                          printf("any\n");
                      } else if (cp  && code->exception_table[k].catch_type < cp_count && cp[code->exception_table[k].catch_type] && cp[code->exception_table[k].catch_type]->tag == CONSTANT_Class) {
                          printf("Class cp_info #%u <%s>\n", code->exception_table[k].catch_type,
-                                get_utf8_from_pool(cp[code->exception_table[k].catch_type]->info.class_info.name_index, cp));
+                                get_utf8_from_pool(cp[code->exception_table[k].catch_type]->info.class_info.name_index, cp, cp_count));
                      } else {
                          printf("cp_info #%u <invalid index or type>\n", code->exception_table[k].catch_type);
                      }
@@ -281,10 +286,10 @@ void print_attributes(u2 count, attribute_info* attributes, cp_info** cp, const 
              if (code->attributes_count > 0 && code->attributes) {
                  printf("%s  Attributes:\n", next_indent);
                  snprintf(next_indent, sizeof(next_indent), "%s    ", indent);
-                 print_attributes(code->attributes_count, code->attributes, cp, next_indent);
+                 print_attributes(code->attributes_count, code->attributes, cp, cp_count, next_indent);
              }
          } else if (strcmp(attr_name, "SourceFile") == 0 && attr->attr_info.source_file_info) {
-             print_source_file_attribute(attr->attr_info.source_file_info, cp);
+             print_source_file_attribute(attr->attr_info.source_file_info, cp, cp_count); 
          } else if (strcmp(attr_name, "LineNumberTable") == 0 && attr->attr_info.line_number_table_info) {
              print_line_number_table_attribute(attr->attr_info.line_number_table_info);
          }
@@ -324,15 +329,14 @@ void print_class_file_info(ClassFile* class_file) {
     cp_info** cp = class_file->constant_pool;
 
     if (cp && class_file->this_class > 0 && class_file->this_class < cp_size && cp[class_file->this_class] && cp[class_file->this_class]->tag == CONSTANT_Class) {
-         printf("This class: cp_info #%u <%s>\n", class_file->this_class, get_utf8_from_pool(cp[class_file->this_class]->info.class_info.name_index, cp));
+         printf("This class: cp_info #%u <%s>\n", class_file->this_class, get_utf8_from_pool(cp[class_file->this_class]->info.class_info.name_index, cp, cp_size));
     } else {
          printf("This class: cp_info #%u <invalid index or pool>\n", class_file->this_class);
     }
     if (class_file->super_class == 0) {
          printf("Super class: cp_info #0 <N/A>\n");
     } else if (cp && class_file->super_class < cp_size && cp[class_file->super_class] && cp[class_file->super_class]->tag == CONSTANT_Class) {
-        printf("Super class: cp_info #%u <%s>\n", class_file->super_class, get_utf8_from_pool(cp[class_file->super_class]->info.class_info.name_index, cp));
-    } else {
+        printf("Super class: cp_info #%u <%s>\n", class_file->super_class, get_utf8_from_pool(cp[class_file->super_class]->info.class_info.name_index, cp, cp_size));    } else {
         printf("Super class: cp_info #%u <invalid index or pool>\n", class_file->super_class);
     }
 
@@ -342,7 +346,7 @@ void print_class_file_info(ClassFile* class_file) {
         for (int i = 0; i < class_file->interfaces_count; i++) {
             u2 if_index = class_file->interfaces[i];
              if (if_index > 0 && if_index < cp_size && cp[if_index] && cp[if_index]->tag == CONSTANT_Class) {
-                  printf("[%d] Interface: cp_info #%u <%s>\n", i, if_index, get_utf8_from_pool(cp[if_index]->info.class_info.name_index, cp));
+                  printf("[%d] Interface: cp_info #%u <%s>\n", i, if_index, get_utf8_from_pool(cp[if_index]->info.class_info.name_index, cp, cp_size));
              } else {
                   printf("[%d] Interface: cp_info #%u <invalid index or pool>\n", i, if_index);
              }
@@ -362,14 +366,15 @@ void print_class_file_info(ClassFile* class_file) {
         printf("\n---- Fields ----\n");
         for (int i = 0; i < class_file->fields_count; i++) {
              field_info* field = &class_file->fields[i];
-             printf("[%d] Name: cp_info #%u <%s>\n", i, field->name_index, get_utf8_from_pool(field->name_index, cp));
-             printf("     Descriptor: cp_info #%u <%s>\n", field->descriptor_index, get_utf8_from_pool(field->descriptor_index, cp));
+             printf("[%d] Name: cp_info #%u <%s>\n", i, field->name_index, get_utf8_from_pool(field->name_index, cp, cp_size));
+             printf("     Descriptor: cp_info #%u <%s>\n", field->descriptor_index, get_utf8_from_pool(field->descriptor_index, cp, cp_size));
              const char* field_flags_str = get_access_flags_string(field->access_flags, TYPE_FIELD);
              printf("     Access flags: 0x%.4X [%s]\n", field->access_flags, field_flags_str);
              free((void*)field_flags_str);
              printf("     Attributes count: %u\n", field->attributes_count);
              if (field->attributes_count > 0 && field->attributes) {
-                  print_attributes(field->attributes_count, field->attributes, cp, "     ");
+                  print_attributes(field->attributes_count, field->attributes, cp, cp_size, "     ");
+             
              }
         }
     }
@@ -378,21 +383,21 @@ void print_class_file_info(ClassFile* class_file) {
          printf("\n---- Methods ----\n");
          for (int i = 0; i < class_file->methods_count; i++) {
              method_info* method = &class_file->methods[i];
-             printf("[%d] Name: cp_info #%u <%s>\n", i, method->name_index, get_utf8_from_pool(method->name_index, cp));
-             printf("     Descriptor: cp_info #%u <%s>\n", method->descriptor_index, get_utf8_from_pool(method->descriptor_index, cp));
+             printf("[%d] Name: cp_info #%u <%s>\n", i, method->name_index, get_utf8_from_pool(method->name_index, cp, cp_size));
+             printf("     Descriptor: cp_info #%u <%s>\n", method->descriptor_index, get_utf8_from_pool(method->descriptor_index, cp, cp_size));
              const char* method_flags_str = get_access_flags_string(method->access_flags, TYPE_METHOD);
              printf("     Access flags: 0x%.4X [%s]\n", method->access_flags, method_flags_str);
              free((void*)method_flags_str);
              printf("     Attributes count: %u\n", method->attributes_count);
              if (method->attributes_count > 0 && method->attributes) {
-                  print_attributes(method->attributes_count, method->attributes, cp, "     ");
+                  print_attributes(method->attributes_count, method->attributes, cp, cp_size, "     ");
              }
          }
      }
 
      if (class_file->attributes_count > 0 && class_file->attributes && cp) {
         printf("\n---- Class Attributes ----\n");
-        print_attributes(class_file->attributes_count, class_file->attributes, cp, "");
+        print_attributes(class_file->attributes_count, class_file->attributes, cp, cp_size, "");
      }
 }
 // --- FIM DAS FUNÇÕES DE EXIBIÇÃO ---
