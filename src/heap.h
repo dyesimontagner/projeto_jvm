@@ -17,7 +17,7 @@ typedef enum {
 // --- ESTRUTURAS DE DADOS ---
 
 /**
- * @brief Cabeçalho comum a todos os objetos no Heap.
+ * Cabeçalho comum a todos os objetos no Heap.
  * Permite identificar se um ponteiro é uma Instância ou um Array.
  */
 typedef struct Objeto {
@@ -25,7 +25,7 @@ typedef struct Objeto {
 } Objeto;
 
 /**
- * @brief Representa uma instância de classe (criada via 'new').
+ * Representa uma instância de classe (criada via 'new').
  */
 typedef struct ObjetoInstancia {
     Objeto cabecalho;
@@ -42,7 +42,7 @@ typedef struct ObjetoInstancia {
 } ObjetoInstancia;
 
 /**
- * @brief Representa um array (criado via 'newarray' ou 'anewarray').
+ *  Representa um array (criado via 'newarray' ou 'anewarray').
  */
 typedef struct ObjetoArray {
     Objeto cabecalho; // Primeiro campo
