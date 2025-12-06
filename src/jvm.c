@@ -1,7 +1,7 @@
 #include "jvm.h"
-#include "frame.h"     // frame_create, frame_destroy, frame_stack_push/pop
+//#include "frame.h"     // frame_create, frame_destroy, frame_stack_push/pop
 #include "engine.h"    // execute_bytecode
-#include "classfile.h" // read_class_file, free_class_file, estruturas da Fase 1
+#include "leitor_class.h" // read_class_file, free_class_file, estruturas da Fase 1
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
