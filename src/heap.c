@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// Lista ligada simples apenas para rastrear alocações e liberar no final (opcional, mas boa prática)
+// Lista ligada simples apenas para rastrear alocações e liberar no final
 typedef struct NoHeap {
     void* objeto;
     struct NoHeap* proximo;
@@ -24,7 +24,6 @@ void inicializar_heap() {
 
 /**
  * Conta quantos campos de instância (não estáticos) uma classe possui.
- * Nota: Numa implementação real, você deve somar recursivamente os campos da superclasse.
  */
 int contar_fields_instancia(ClassFile* classe) {
     int contador = 0;
@@ -49,7 +48,6 @@ ObjetoInstancia* heap_criar_objeto(ClassFile* classe) {
     novo_obj->classe_ref = classe;
     
     // 3. Aloca espaço para os dados (fields)
-    // O README menciona criação de objetos na seção 7 
     int qtd_fields = contar_fields_instancia(classe);
     
     if (qtd_fields > 0) {

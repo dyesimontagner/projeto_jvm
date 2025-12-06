@@ -2,10 +2,9 @@
 #define HEAP_H
 
 #include <stdint.h>
-#include "./leitor_class.h" // Importa a definição de ClassFile do seu projeto base
+#include "./leitor_class.h" // Importa a definição de ClassFile
 
-// Definição de tipos básicos caso não estejam no leitor.h
-// Se já estiverem, remova estas linhas.
+// Definição de tipos básicos
 typedef uint8_t u1;
 typedef uint32_t u4;
 
@@ -15,22 +14,21 @@ typedef enum {
     TIPO_OBJETO_ARRAY
 } TipoObjeto;
 
-// --- ESTRUTURAS DE DADOS (O QUE VAI NO HEAP) ---
+// --- ESTRUTURAS DE DADOS ---
 
 /**
  * @brief Cabeçalho comum a todos os objetos no Heap.
- * Permite que identifiquemos se um ponteiro é uma Instância ou um Array.
+ * Permite identificar se um ponteiro é uma Instância ou um Array.
  */
 typedef struct Objeto {
     TipoObjeto tipo;
-    // Sem Garbage Collector, não precisamos de flags de "mark-and-sweep" aqui
 } Objeto;
 
 /**
  * @brief Representa uma instância de classe (criada via 'new').
  */
 typedef struct ObjetoInstancia {
-    Objeto cabecalho; // Deve ser o primeiro campo para "herança" funcionar em C
+    Objeto cabecalho;
     
     // Ponteiro para a classe que originou este objeto (para acessar métodos, constant pool, etc)
     ClassFile* classe_ref;
@@ -74,6 +72,6 @@ ObjetoArray* heap_criar_array_primitivo(u4 tamanho, u1 tipo_elemento);
 ObjetoArray* heap_criar_array_referencia(u4 tamanho, ClassFile* classe_ref);
 
 // Como não temos GC, podemos ter uma função para limpar tudo no final da execução
-void liberar_heap_total(); // Opcional, já que o README diz sem GC.
+void liberar_heap_total();
 
 #endif
