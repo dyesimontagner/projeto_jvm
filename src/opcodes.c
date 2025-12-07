@@ -1,7 +1,6 @@
 #include "opcodes.h"
 
 // Tabela com informações sobre cada opcode
-// Baseado na especificação JVM e no projeto marcelojunqueiraf
 const InstructionInfo instruction_table[256] = {
     [op_nop] = {"nop", 0}, [aconst_null] = {"aconst_null", 0}, [iconst_m1] = {"iconst_m1", 0}, [iconst_0] = {"iconst_0", 0},
     [iconst_1] = {"iconst_1", 0}, [iconst_2] = {"iconst_2", 0}, [iconst_3] = {"iconst_3", 0}, [iconst_4] = {"iconst_4", 0},
