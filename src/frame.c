@@ -89,17 +89,43 @@ void operand_stack_push_float(OperandStack* stack, float value) {
 }
 
 void operand_stack_push_long(OperandStack* stack, int64_t value) {
-    if (stack->top >= stack->max_size - 1) return;
-    stack->top++;
-    stack->elements[stack->top].type = TYPE_LONG;
-    stack->elements[stack->top].value.long_val = value;
+    if (stack->top >= stack->max_size - 2) { 
+        // Em um projeto real, você lançaria StackOverflowError.
+        fprintf(stderr, "Erro: Stack Overflow na pilha de operandos (LONG)\n"); 
+        return; 
+    } 
+    
+    // Armazena High bytes (os 32 bits superiores) no primeiro slot
+    stack->elements[stack->top + 1].type = TYPE_LONG;
+    stack->elements[stack->top + 1].value.int_val = (int32_t)(value >> 32); 
+
+    // Armazena Low bytes (os 32 bits inferiores) no segundo slot
+    stack->elements[stack->top + 2].type = TYPE_LONG;
+    stack->elements[stack->top + 2].value.int_val = (int32_t)value;      
+
+    stack->top += 2; // Avança 2 slots
 }
 
 void operand_stack_push_double(OperandStack* stack, double value) {
-    if (stack->top >= stack->max_size - 1) return;
-    stack->top++;
-    stack->elements[stack->top].type = TYPE_DOUBLE;
-    stack->elements[stack->top].value.double_val = value;
+    // Reinterpretando double como 64-bit integer para armazenar os bits corretamente
+    int64_t bit_value;
+    memcpy(&bit_value, &value, sizeof(double)); 
+
+    // Verifica espaço para DOIS slots
+    if (stack->top >= stack->max_size - 2) {
+        fprintf(stderr, "Erro: Stack Overflow na pilha de operandos (DOUBLE)\n"); 
+        return; 
+    }
+    
+    // Armazena High bytes no primeiro slot
+    stack->elements[stack->top + 1].type = TYPE_DOUBLE;
+    stack->elements[stack->top + 1].value.int_val = (int32_t)(bit_value >> 32); 
+
+    // Armazena Low bytes no segundo slot
+    stack->elements[stack->top + 2].type = TYPE_DOUBLE;
+    stack->elements[stack->top + 2].value.int_val = (int32_t)bit_value;      
+
+    stack->top += 2; // Avança 2 slots
 }
 
 void operand_stack_push_reference(OperandStack* stack, void* ref) {
@@ -122,13 +148,30 @@ float operand_stack_pop_float(OperandStack* stack) {
 }
 
 int64_t operand_stack_pop_long(OperandStack* stack) {
-    if (stack->top < 0) return 0;
-    return stack->elements[stack->top--].value.long_val;
+    if (stack->top < 1) return 0; // Precisa de pelo menos 2 slots
+
+    // Combina os dois slots (Low bytes lidos primeiro)
+    int64_t low = (uint64_t)stack->elements[stack->top].value.int_val & 0xFFFFFFFF;
+    int64_t high = (uint64_t)stack->elements[stack->top - 1].value.int_val << 32;
+
+    stack->top -= 2; // Retrocede 2 slots
+    return high | low;
 }
 
 double operand_stack_pop_double(OperandStack* stack) {
-    if (stack->top < 0) return 0.0;
-    return stack->elements[stack->top--].value.double_val;
+    if (stack->top < 1) return 0.0; // Precisa de pelo menos 2 slots
+
+    // 1. Combina os dois slots em um inteiro de 64 bits
+    int64_t low = (uint64_t)stack->elements[stack->top].value.int_val & 0xFFFFFFFF;
+    int64_t high = (uint64_t)stack->elements[stack->top - 1].value.int_val << 32;
+    int64_t bit_value = high | low;
+
+    stack->top -= 2; // Retrocede 2 slots
+    
+    // 2. Reinterpreta o inteiro de 64 bits como double
+    double result;
+    memcpy(&result, &bit_value, sizeof(double));
+    return result;
 }
 
 void* operand_stack_pop_reference(OperandStack* stack) {
@@ -152,11 +195,35 @@ int32_t local_var_get_int(LocalVariables* locals, int index) {
 
 // (Adicione os outros stubs de local_var se o compilador reclamar, mas este deve bastar pro Fatorial)
 void local_var_set_float(LocalVariables* locals, int index, float value) { (void)locals; (void)index; (void)value; }
-void local_var_set_long(LocalVariables* locals, int index, int64_t value) { (void)locals; (void)index; (void)value; }
-void local_var_set_double(LocalVariables* locals, int index, double value) { (void)locals; (void)index; (void)value; }
+void local_var_set_long(LocalVariables* locals, int index, int64_t value) {
+    if (index >= 0 && index < locals->size - 1) { // Verifica se há espaço para index E index+1
+        locals->variables[index].type = TYPE_LONG;
+        locals->variables[index].value.int_val = (int32_t)(value >> 32); // High bytes
+
+        locals->variables[index + 1].type = TYPE_LONG;
+        locals->variables[index + 1].value.int_val = (int32_t)value;      // Low bytes
+    }
+}
+void local_var_set_double(LocalVariables* locals, int index, double value) {
+    int64_t bit_value;
+    memcpy(&bit_value, &value, sizeof(double));
+    local_var_set_long(locals, index, bit_value); // Reutiliza a lógica de set_long
+}
 void local_var_set_reference(LocalVariables* locals, int index, void* ref) { (void)locals; (void)index; (void)ref; }
 
 float local_var_get_float(LocalVariables* locals, int index) { (void)locals; (void)index; return 0.0; }
-int64_t local_var_get_long(LocalVariables* locals, int index) { (void)locals; (void)index; return 0; }
-double local_var_get_double(LocalVariables* locals, int index) { (void)locals; (void)index; return 0.0; }
+int64_t local_var_get_long(LocalVariables* locals, int index) {
+    if (index >= 0 && index < locals->size - 1) {
+        int64_t low = (uint64_t)locals->variables[index + 1].value.int_val & 0xFFFFFFFF;
+        int64_t high = (uint64_t)locals->variables[index].value.int_val << 32;
+        return high | low;
+    }
+    return 0;
+}
+double local_var_get_double(LocalVariables* locals, int index) {
+    int64_t bit_value = local_var_get_long(locals, index); // Reutiliza a lógica de get_long
+    double result;
+    memcpy(&result, &bit_value, sizeof(double));
+    return result;
+}
 void* local_var_get_reference(LocalVariables* locals, int index) { (void)locals; (void)index; return NULL; }
