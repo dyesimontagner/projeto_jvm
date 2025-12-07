@@ -2,7 +2,7 @@
 #include "engine.h"
 
 void invokestatic_op(JVM* jvm, Frame* frame) {
-    // Lógica do invokestatic copiada do seu código
+    
 }
 
 void ireturn_op(JVM* jvm, Frame* frame) {
