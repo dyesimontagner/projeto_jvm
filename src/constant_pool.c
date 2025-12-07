@@ -70,6 +70,21 @@ void read_constant_pool(u2 count, cp_info** constant_pool, FILE* file) {
                 fread(&entry->info.name_and_type_info.descriptor_index, sizeof(u2), 1, file);
                 entry->info.name_and_type_info.descriptor_index = swap_u2(entry->info.name_and_type_info.descriptor_index);
                 break;
+            case CONSTANT_MethodType: // Tag 16
+                fread(&entry->info.method_type_info.descriptor_index, sizeof(u2), 1, file);
+                entry->info.method_type_info.descriptor_index = swap_u2(entry->info.method_type_info.descriptor_index);
+                break;
+            case CONSTANT_MethodHandle: 
+                fread(&entry->info.method_handle_info.reference_kind, sizeof(u1), 1, file);
+                fread(&entry->info.method_handle_info.reference_index, sizeof(u2), 1, file);
+                entry->info.method_handle_info.reference_index = swap_u2(entry->info.method_handle_info.reference_index);
+                break;
+            case CONSTANT_InvokeDynamic: 
+                fread(&entry->info.invoke_dynamic_info.bootstrap_method_attr_index, sizeof(u2), 1, file);
+                entry->info.invoke_dynamic_info.bootstrap_method_attr_index = swap_u2(entry->info.invoke_dynamic_info.bootstrap_method_attr_index);
+                fread(&entry->info.invoke_dynamic_info.name_and_type_index, sizeof(u2), 1, file);
+                entry->info.invoke_dynamic_info.name_and_type_index = swap_u2(entry->info.invoke_dynamic_info.name_and_type_index);
+                break; 
             case CONSTANT_Integer:
                 fread(&entry->info.integer_info.bytes, sizeof(u4), 1, file);
                 entry->info.integer_info.bytes = swap_u4(entry->info.integer_info.bytes);

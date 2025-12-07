@@ -117,6 +117,9 @@ void jvm_destroy(JVM* jvm);
 bool jvm_load_class(JVM* jvm, const char* filename);
 ClassFile* jvm_find_class(JVM* jvm, const char* class_name);
 
+// Busca um método em uma classe carregada pelo nome e descritor.
+method_info* jvm_find_method(ClassFile* class_file, const char* method_name, const char* descriptor);
+
 // Execução
 bool jvm_execute(JVM* jvm, const char* class_name, const char* method_name);
 void jvm_run(JVM* jvm);

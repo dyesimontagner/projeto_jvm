@@ -269,3 +269,43 @@ void jvm_print_status(JVM* jvm) {
 
     printf("=====================\n\n");
 }
+
+/**
+ * Procura um método em uma ClassFile carregada pelo nome e descritor.
+ * Retorna o ponteiro method_info* se encontrado, ou NULL.
+ */
+method_info* jvm_find_method(ClassFile* class_file, 
+                             const char* method_name, 
+                             const char* descriptor) {
+    
+    if (!class_file || !method_name || !descriptor) return NULL;
+
+    // Itera sobre todos os métodos na classe
+    for (int i = 0; i < class_file->methods_count; i++) {
+        method_info* method = &class_file->methods[i];
+        
+        // Resolve o nome do método na Constant Pool
+        const char* mname = get_utf8_from_pool(
+            method->name_index,
+            class_file->constant_pool,
+            class_file->constant_pool_count
+        );
+
+        // Resolve o descritor (assinatura) na Constant Pool
+        const char* mdesc = get_utf8_from_pool(
+            method->descriptor_index,
+            class_file->constant_pool,
+            class_file->constant_pool_count
+        );
+        
+        // Compara nome e descritor
+        if (mname && mdesc && 
+            strcmp(mname, method_name) == 0 && 
+            strcmp(mdesc, descriptor) == 0) {
+            
+            return method; // Método encontrado
+        }
+    }
+    
+    return NULL; // Método não encontrado
+}

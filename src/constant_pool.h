@@ -16,7 +16,10 @@ typedef enum {
     CONSTANT_Fieldref = 9,
     CONSTANT_Methodref = 10,
     CONSTANT_InterfaceMethodref = 11,
-    CONSTANT_NameAndType = 12
+    CONSTANT_NameAndType = 12,
+    CONSTANT_MethodHandle = 15,
+    CONSTANT_MethodType = 16,
+    CONSTANT_InvokeDynamic = 18
 } CONSTANT_Type;
 
 // Estrutura para uma constante do tipo Utf8
@@ -30,7 +33,9 @@ typedef struct { u4 bytes; } CONSTANT_Integer_info;
 typedef struct { u4 bytes; } CONSTANT_Float_info;
 typedef struct { u4 high_bytes; u4 low_bytes; } CONSTANT_Long_info;
 typedef struct { u4 high_bytes; u4 low_bytes; } CONSTANT_Double_info;
-
+typedef struct { u2 bootstrap_method_attr_index; u2 name_and_type_index; } CONSTANT_InvokeDynamic_info;
+typedef struct { u1 reference_kind; u2 reference_index; } CONSTANT_MethodHandle_info;
+typedef struct { u2 descriptor_index; } CONSTANT_MethodType_info;
 // Estrutura genérica para uma entrada do Constant Pool
 typedef struct {
     u1 tag;
@@ -46,6 +51,9 @@ typedef struct {
         CONSTANT_Float_info          float_info;
         CONSTANT_Long_info           long_info;
         CONSTANT_Double_info         double_info;
+        CONSTANT_InvokeDynamic_info  invoke_dynamic_info;
+        CONSTANT_MethodHandle_info   method_handle_info;
+        CONSTANT_MethodType_info     method_type_info;
     } info;
 } cp_info;
 

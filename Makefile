@@ -14,7 +14,8 @@ TARGET = bin/leitor
 TARGET_ASAN = bin/leitor_asan
 
 # Lista de todos os arquivos .c que compõem o programa
-SOURCES = src/main.c src/leitor_class.c src/constant_pool.c src/opcodes.c src/exibidor.c src/jvm.c# Adicionado exibidor.c
+#SOURCES = src/main.c src/leitor_class.c src/constant_pool.c src/opcodes.c src/exibidor.c src/jvm.c# Adicionado exibidor.c
+SOURCES = src/main.c src/leitor_class.c src/constant_pool.c src/opcodes.c src/exibidor.c src/jvm.c src/frame.c src/engine.c
 
 # A regra principal: 'all' é executada quando você digita 'make'
 all: $(TARGET)
