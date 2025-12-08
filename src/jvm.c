@@ -178,7 +178,7 @@ bool jvm_execute(JVM* jvm, const char* class_name, const char* method_name) {
         return false;
     }
 
-    // Encontrar o método
+    // Encontrar o Metodo
     method_info* method = NULL;
     for (int i = 0; i < class_file->methods_count; i++) {
         u2 name_idx = class_file->methods[i].name_index;
@@ -197,12 +197,12 @@ bool jvm_execute(JVM* jvm, const char* class_name, const char* method_name) {
 
     if (!method) {
         fprintf(stderr,
-                "Erro: Método '%s' nao encontrado na classe '%s'!\n",
+                "Erro: Metodo '%s' nao encontrado na classe '%s'!\n",
                 method_name, class_name);
         return false;
     }
 
-    // Criar frame para o método (implementaçao em frame.c)
+    // Criar frame para o Metodo (implementaçao em frame.c)
     Frame* frame = frame_create(class_file, method);
     if (!frame) {
         fprintf(stderr, "Erro: Falha ao criar frame para metodo '%s'!\n",
@@ -232,7 +232,7 @@ void jvm_run(JVM* jvm) {
 
         // Verificar se chegou ao fim do código
         if (current_frame->pc >= current_frame->code_length) {
-            printf("Método finalizado.\n");
+            printf("Metodo finalizado.\n");
             Frame* finished_frame = frame_stack_pop(&jvm->frame_stack);
             frame_destroy(finished_frame);
             continue;
@@ -274,7 +274,7 @@ void jvm_print_status(JVM* jvm) {
 }
 
 /**
- * Procura um método em uma ClassFile carregada pelo nome e descritor.
+ * Procura um Metodo em uma ClassFile carregada pelo nome e descritor.
  * Retorna o ponteiro method_info* se encontrado, ou NULL.
  */
 method_info* jvm_find_method(ClassFile* class_file, 
@@ -287,7 +287,7 @@ method_info* jvm_find_method(ClassFile* class_file,
     for (int i = 0; i < class_file->methods_count; i++) {
         method_info* method = &class_file->methods[i];
         
-        // Resolve o nome do método na Constant Pool
+        // Resolve o nome do Metodo na Constant Pool
         const char* mname = get_utf8_from_pool(
             method->name_index,
             class_file->constant_pool,
@@ -306,9 +306,9 @@ method_info* jvm_find_method(ClassFile* class_file,
             strcmp(mname, method_name) == 0 && 
             strcmp(mdesc, descriptor) == 0) {
             
-            return method; // Método encontrado
+            return method; // Metodo encontrado
         }
     }
     
-    return NULL; // Método nao encontrado
+    return NULL; // Metodo nao encontrado
 }

@@ -93,9 +93,9 @@ int main(int argc, char* argv[]) {
         }
 
         printf("Classe: %s\n", class_name);
-        printf("Método: %s\n\n", method_name);
+        printf("Metodo: %s\n\n", method_name);
 
-        // Preparar execução do método
+        // Preparar execução do Metodo
         if (!jvm_execute(jvm, class_name, method_name)) {
             fprintf(stderr, "Erro: Falha ao preparar execucao!\n");
             jvm_destroy(jvm);
