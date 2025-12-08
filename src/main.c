@@ -4,6 +4,7 @@
 #include "leitor_class.h"
 #include "exibidor.h"
 #include "jvm.h"
+#include "engine.h" // <--- ADICIONADO: Necessário para engine_init()
 
 void print_usage(const char* program_name) {
     printf("Uso:\n");
@@ -15,6 +16,9 @@ void print_usage(const char* program_name) {
 }
 
 int main(int argc, char* argv[]) {
+    // Inicializa a tabela de opcodes antes de qualquer coisa
+    engine_init();
+
     if (argc < 3) {
         print_usage(argv[0]);
         return 1;
@@ -70,8 +74,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        // Obter o nome da classe do arquivo
-        // Simplificação: usar o nome do arquivo sem .class
+        // Obter o nome da classe do arquivo (Simplificação)
         char class_name[256];
         strncpy(class_name, filename, 255);
         class_name[255] = '\0';

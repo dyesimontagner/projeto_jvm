@@ -1,55 +1,297 @@
 #include "opcodes.h"
+#include "jvm.h"
+#include "frame.h"
+#include "engine.h" // Para read_u1, read_s2
+#include <stdio.h>
+#include <stdlib.h>
 
-// Tabela com informações sobre cada opcode
+// ============================================================================
+// INSTRUÇÕES GERAIS
+// ============================================================================
+
+// NOP (0x00) - Não faz nada
+void nop_op(JVM* jvm, Frame* frame) {
+    (void)jvm;
+    (void)frame;
+}
+
+// ============================================================================
+// INSTRUÇÕES DE ARRAY (Para suportar multi.class e vetores)
+// ============================================================================
+
+// 0xC5 - multianewarray
+void multianewarray_op(JVM* jvm, Frame* frame) {
+    (void)jvm;
+    read_s2(frame); // Lê índice do constant pool (ignorado nesta implementação simplificada)
+    u1 dimensions = read_u1(frame); // Lê número de dimensões
+
+    if (dimensions != 2) {
+        printf("Erro: Implementação simplificada suporta apenas 2 dimensões.\n");
+        exit(1);
+    }
+
+    // A pilha contém os tamanhos: [size1, size2] (topo)
+    // O Java empilha dim1, depois dim2. Então o topo é dim2 (colunas).
+    int32_t dim2 = operand_stack_pop_int(&frame->operand_stack); // Colunas
+    int32_t dim1 = operand_stack_pop_int(&frame->operand_stack); // Linhas
+
+    // Aloca um array de ponteiros (linhas)
+    void** matrix = (void**)calloc(dim1, sizeof(void*));
+    if (!matrix) {
+        fprintf(stderr, "Erro de alocação no multianewarray (linhas)\n");
+        exit(1);
+    }
+    
+    // Para cada linha, aloca um array de referências (colunas)
+    for (int i = 0; i < dim1; i++) {
+        matrix[i] = (void*)calloc(dim2, sizeof(void*));
+        if (!matrix[i]) {
+            fprintf(stderr, "Erro de alocação no multianewarray (colunas)\n");
+            exit(1);
+        }
+    }
+
+    // Empilha a referência para a matriz recém-criada
+    operand_stack_push_reference(&frame->operand_stack, matrix);
+}
+
+// 0x32 - aaload (Array Reference Load)
+void aaload_op(JVM* jvm, Frame* frame) {
+    (void)jvm;
+    int32_t index = operand_stack_pop_int(&frame->operand_stack);
+    void** arrayref = (void**)operand_stack_pop_reference(&frame->operand_stack);
+
+    if (!arrayref) {
+        fprintf(stderr, "Erro: NullPointerException em aaload\n");
+        exit(1);
+    }
+
+    void* value = arrayref[index];
+    operand_stack_push_reference(&frame->operand_stack, value);
+}
+
+// 0x53 - aastore (Array Reference Store)
+void aastore_op(JVM* jvm, Frame* frame) {
+    (void)jvm;
+    void* value = operand_stack_pop_reference(&frame->operand_stack);
+    int32_t index = operand_stack_pop_int(&frame->operand_stack);
+    void** arrayref = (void**)operand_stack_pop_reference(&frame->operand_stack);
+
+    if (!arrayref) {
+        fprintf(stderr, "Erro: NullPointerException em aastore\n");
+        exit(1);
+    }
+
+    arrayref[index] = value;
+}
+
+// ============================================================================
+// TABELA DE INSTRUÇÕES (Para o Exibidor)
+// ============================================================================
 const InstructionInfo instruction_table[256] = {
-    [op_nop] = {"nop", 0}, [aconst_null] = {"aconst_null", 0}, [iconst_m1] = {"iconst_m1", 0}, [iconst_0] = {"iconst_0", 0},
-    [iconst_1] = {"iconst_1", 0}, [iconst_2] = {"iconst_2", 0}, [iconst_3] = {"iconst_3", 0}, [iconst_4] = {"iconst_4", 0},
-    [iconst_5] = {"iconst_5", 0}, [lconst_0] = {"lconst_0", 0}, [lconst_1] = {"lconst_1", 0}, [fconst_0] = {"fconst_0", 0},
-    [fconst_1] = {"fconst_1", 0}, [fconst_2] = {"fconst_2", 0}, [dconst_0] = {"dconst_0", 0}, [dconst_1] = {"dconst_1", 0},
-    [bipush] = {"bipush", 1}, [sipush] = {"sipush", 2}, [ldc] = {"ldc", 1}, [ldc_w] = {"ldc_w", 2}, [ldc2_w] = {"ldc2_w", 2},
-    [iload] = {"iload", 1}, [lload] = {"lload", 1}, [fload] = {"fload", 1}, [dload] = {"dload", 1}, [aload] = {"aload", 1},
-    [iload_0] = {"iload_0", 0}, [iload_1] = {"iload_1", 0}, [iload_2] = {"iload_2", 0}, [iload_3] = {"iload_3", 0},
-    [lload_0] = {"lload_0", 0}, [lload_1] = {"lload_1", 0}, [lload_2] = {"lload_2", 0}, [lload_3] = {"lload_3", 0},
-    [fload_0] = {"fload_0", 0}, [fload_1] = {"fload_1", 0}, [fload_2] = {"fload_2", 0}, [fload_3] = {"fload_3", 0},
-    [dload_0] = {"dload_0", 0}, [dload_1] = {"dload_1", 0}, [dload_2] = {"dload_2", 0}, [dload_3] = {"dload_3", 0},
-    [aload_0] = {"aload_0", 0}, [aload_1] = {"aload_1", 0}, [aload_2] = {"aload_2", 0}, [aload_3] = {"aload_3", 0},
-    [iaload] = {"iaload", 0}, [laload] = {"laload", 0}, [faload] = {"faload", 0}, [daload] = {"daload", 0},
-    [aaload] = {"aaload", 0}, [baload] = {"baload", 0}, [caload] = {"caload", 0}, [saload] = {"saload", 0},
-    [istore] = {"istore", 1}, [lstore] = {"lstore", 1}, [fstore] = {"fstore", 1}, [dstore] = {"dstore", 1},
-    [astore] = {"astore", 1}, [istore_0] = {"istore_0", 0}, [istore_1] = {"istore_1", 0}, [istore_2] = {"istore_2", 0},
-    [istore_3] = {"istore_3", 0}, [lstore_0] = {"lstore_0", 0}, [lstore_1] = {"lstore_1", 0}, [lstore_2] = {"lstore_2", 0},
-    [lstore_3] = {"lstore_3", 0}, [fstore_0] = {"fstore_0", 0}, [fstore_1] = {"fstore_1", 0}, [fstore_2] = {"fstore_2", 0},
-    [fstore_3] = {"fstore_3", 0}, [dstore_0] = {"dstore_0", 0}, [dstore_1] = {"dstore_1", 0}, [dstore_2] = {"dstore_2", 0},
-    [dstore_3] = {"dstore_3", 0}, [astore_0] = {"astore_0", 0}, [astore_1] = {"astore_1", 0}, [astore_2] = {"astore_2", 0},
-    [astore_3] = {"astore_3", 0}, [iastore] = {"iastore", 0}, [lastore] = {"lastore", 0}, [fastore] = {"fastore", 0},
-    [dastore] = {"dastore", 0}, [aastore] = {"aastore", 0}, [bastore] = {"bastore", 0}, [castore] = {"castore", 0},
-    [sastore] = {"sastore", 0}, [pop] = {"pop", 0}, [pop2] = {"pop2", 0}, [dup] = {"dup", 0}, [dup_x1] = {"dup_x1", 0},
-    [dup_x2] = {"dup_x2", 0}, [dup2] = {"dup2", 0}, [dup2_x1] = {"dup2_x1", 0}, [dup2_x2] = {"dup2_x2", 0}, [swap] = {"swap", 0},
-    [iadd] = {"iadd", 0}, [ladd] = {"ladd", 0}, [fadd] = {"fadd", 0}, [dadd] = {"dadd", 0}, [isub] = {"isub", 0},
-    [lsub] = {"lsub", 0}, [fsub] = {"fsub", 0}, [dsub] = {"dsub", 0}, [imul] = {"imul", 0}, [lmul] = {"lmul", 0},
-    [fmul] = {"fmul", 0}, [dmul] = {"dmul", 0}, [idiv_] = {"idiv", 0}, [ldiv_] = {"ldiv", 0}, [fdiv_] = {"fdiv", 0},
-    [ddiv_] = {"ddiv", 0}, [irem] = {"irem", 0}, [lrem] = {"lrem", 0}, [frem] = {"frem", 0}, [drem_] = {"drem", 0},
-    [ineg] = {"ineg", 0}, [lneg] = {"lneg", 0}, [fneg] = {"fneg", 0}, [dneg] = {"dneg", 0}, [ishl] = {"ishl", 0},
-    [lshl] = {"lshl", 0}, [ishr] = {"ishr", 0}, [lshr] = {"lshr", 0}, [iushr] = {"iushr", 0}, [lushr] = {"lushr", 0},
-    [iand] = {"iand", 0}, [land] = {"land", 0}, [ior] = {"ior", 0}, [lor] = {"lor", 0}, [ixor] = {"ixor", 0},
-    [lxor] = {"lxor", 0}, [iinc] = {"iinc", 2}, [i2l] = {"i2l", 0}, [i2f] = {"i2f", 0}, [i2d] = {"i2d", 0},
-    [l2i] = {"l2i", 0}, [l2f] = {"l2f", 0}, [l2d] = {"l2d", 0}, [f2i] = {"f2i", 0}, [f2l] = {"f2l", 0}, [f2d] = {"f2d", 0},
-    [d2i] = {"d2i", 0}, [d2l] = {"d2l", 0}, [d2f] = {"d2f", 0}, [i2b] = {"i2b", 0}, [i2c] = {"i2c", 0}, [i2s] = {"i2s", 0},
-    [lcmp] = {"lcmp", 0}, [fcmpl] = {"fcmpl", 0}, [fcmpg] = {"fcmpg", 0}, [dcmpl] = {"dcmpl", 0}, [dcmpg] = {"dcmpg", 0},
-    [ifeq] = {"ifeq", 2}, [ifne] = {"ifne", 2}, [iflt] = {"iflt", 2}, [ifge] = {"ifge", 2}, [ifgt] = {"ifgt", 2},
-    [ifle] = {"ifle", 2}, [if_icmpeq] = {"if_icmpeq", 2}, [if_icmpne] = {"if_icmpne", 2}, [if_icmplt] = {"if_icmplt", 2},
-    [if_icmpge] = {"if_icmpge", 2}, [if_icmpgt] = {"if_icmpgt", 2}, [if_icmple] = {"if_icmple", 2}, [if_acmpeq] = {"if_acmpeq", 2},
-    [if_acmpne] = {"if_acmpne", 2}, [goto_] = {"goto", 2}, [jsr] = {"jsr", 2}, [ret] = {"ret", 1}, [tableswitch] = {"tableswitch", -1}, // -1 indica tratamento especial
-    [lookupswitch] = {"lookupswitch", -1}, // -1 indica tratamento especial
-    [ireturn] = {"ireturn", 0}, [lreturn] = {"lreturn", 0}, [freturn] = {"freturn", 0},
-    [dreturn] = {"dreturn", 0}, [areturn] = {"areturn", 0}, [return_] = {"return", 0}, [getstatic] = {"getstatic", 2},
-    [putstatic] = {"putstatic", 2}, [getfield] = {"getfield", 2}, [putfield] = {"putfield", 2}, [invokevirtual] = {"invokevirtual", 2},
-    [invokespecial] = {"invokespecial", 2}, [invokestatic] = {"invokestatic", 2}, [invokeinterface] = {"invokeinterface", 4},
-    [invokedynamic] = {"invokedynamic", 4}, [new_] = {"new", 2}, [newarray] = {"newarray", 1}, [anewarray] = {"anewarray", 2},
-    [arraylength] = {"arraylength", 0}, [athrow] = {"athrow", 0}, [checkcast] = {"checkcast", 2}, [instanceof_] = {"instanceof", 2},
-    [monitorenter] = {"monitorenter", 0}, [monitorexit] = {"monitorexit", 0}, [wide] = {"wide", -1}, // -1 indica tratamento especial
-    [multianewarray] = {"multianewarray", 3},
-    [ifnull] = {"ifnull", 2}, [ifnonnull] = {"ifnonnull", 2}, [goto_w] = {"goto_w", 4}, [jsr_w] = {"jsr_w", 4},
-    [breakpoint] = {"breakpoint", 0}, [impdep1] = {"impdep1", 0}, [impdep2] = {"impdep2", 0}
-    // Opcodes restantes serão NULL por defeito na inicialização de array C99
+    [0x00] = { "nop", 0 },
+    [0x01] = { "aconst_null", 0 },
+    [0x02] = { "iconst_m1", 0 },
+    [0x03] = { "iconst_0", 0 },
+    [0x04] = { "iconst_1", 0 },
+    [0x05] = { "iconst_2", 0 },
+    [0x06] = { "iconst_3", 0 },
+    [0x07] = { "iconst_4", 0 },
+    [0x08] = { "iconst_5", 0 },
+    [0x09] = { "lconst_0", 0 },
+    [0x0a] = { "lconst_1", 0 },
+    [0x0b] = { "fconst_0", 0 },
+    [0x0c] = { "fconst_1", 0 },
+    [0x0d] = { "fconst_2", 0 },
+    [0x0e] = { "dconst_0", 0 },
+    [0x0f] = { "dconst_1", 0 },
+    [0x10] = { "bipush", 1 },
+    [0x11] = { "sipush", 2 },
+    [0x12] = { "ldc", 1 },
+    [0x13] = { "ldc_w", 2 },
+    [0x14] = { "ldc2_w", 2 },
+    [0x15] = { "iload", 1 },
+    [0x16] = { "lload", 1 },
+    [0x17] = { "fload", 1 },
+    [0x18] = { "dload", 1 },
+    [0x19] = { "aload", 1 },
+    [0x1a] = { "iload_0", 0 },
+    [0x1b] = { "iload_1", 0 },
+    [0x1c] = { "iload_2", 0 },
+    [0x1d] = { "iload_3", 0 },
+    [0x1e] = { "lload_0", 0 },
+    [0x1f] = { "lload_1", 0 },
+    [0x20] = { "lload_2", 0 },
+    [0x21] = { "lload_3", 0 },
+    [0x22] = { "fload_0", 0 },
+    [0x23] = { "fload_1", 0 },
+    [0x24] = { "fload_2", 0 },
+    [0x25] = { "fload_3", 0 },
+    [0x26] = { "dload_0", 0 },
+    [0x27] = { "dload_1", 0 },
+    [0x28] = { "dload_2", 0 },
+    [0x29] = { "dload_3", 0 },
+    [0x2a] = { "aload_0", 0 },
+    [0x2b] = { "aload_1", 0 },
+    [0x2c] = { "aload_2", 0 },
+    [0x2d] = { "aload_3", 0 },
+    [0x2e] = { "iaload", 0 },
+    [0x2f] = { "laload", 0 },
+    [0x30] = { "faload", 0 },
+    [0x31] = { "daload", 0 },
+    [0x32] = { "aaload", 0 },
+    [0x33] = { "baload", 0 },
+    [0x34] = { "caload", 0 },
+    [0x35] = { "saload", 0 },
+    [0x36] = { "istore", 1 },
+    [0x37] = { "lstore", 1 },
+    [0x38] = { "fstore", 1 },
+    [0x39] = { "dstore", 1 },
+    [0x3a] = { "astore", 1 },
+    [0x3b] = { "istore_0", 0 },
+    [0x3c] = { "istore_1", 0 },
+    [0x3d] = { "istore_2", 0 },
+    [0x3e] = { "istore_3", 0 },
+    [0x3f] = { "lstore_0", 0 },
+    [0x40] = { "lstore_1", 0 },
+    [0x41] = { "lstore_2", 0 },
+    [0x42] = { "lstore_3", 0 },
+    [0x43] = { "fstore_0", 0 },
+    [0x44] = { "fstore_1", 0 },
+    [0x45] = { "fstore_2", 0 },
+    [0x46] = { "fstore_3", 0 },
+    [0x47] = { "dstore_0", 0 },
+    [0x48] = { "dstore_1", 0 },
+    [0x49] = { "dstore_2", 0 },
+    [0x4a] = { "dstore_3", 0 },
+    [0x4b] = { "astore_0", 0 },
+    [0x4c] = { "astore_1", 0 },
+    [0x4d] = { "astore_2", 0 },
+    [0x4e] = { "astore_3", 0 },
+    [0x4f] = { "iastore", 0 },
+    [0x50] = { "lastore", 0 },
+    [0x51] = { "fastore", 0 },
+    [0x52] = { "dastore", 0 },
+    [0x53] = { "aastore", 0 },
+    [0x54] = { "bastore", 0 },
+    [0x55] = { "castore", 0 },
+    [0x56] = { "sastore", 0 },
+    [0x57] = { "pop", 0 },
+    [0x58] = { "pop2", 0 },
+    [0x59] = { "dup", 0 },
+    [0x5a] = { "dup_x1", 0 },
+    [0x5b] = { "dup_x2", 0 },
+    [0x5c] = { "dup2", 0 },
+    [0x5d] = { "dup2_x1", 0 },
+    [0x5e] = { "dup2_x2", 0 },
+    [0x5f] = { "swap", 0 },
+    [0x60] = { "iadd", 0 },
+    [0x61] = { "ladd", 0 },
+    [0x62] = { "fadd", 0 },
+    [0x63] = { "dadd", 0 },
+    [0x64] = { "isub", 0 },
+    [0x65] = { "lsub", 0 },
+    [0x66] = { "fsub", 0 },
+    [0x67] = { "dsub", 0 },
+    [0x68] = { "imul", 0 },
+    [0x69] = { "lmul", 0 },
+    [0x6a] = { "fmul", 0 },
+    [0x6b] = { "dmul", 0 },
+    [0x6c] = { "idiv", 0 },
+    [0x6d] = { "ldiv", 0 },
+    [0x6e] = { "fdiv", 0 },
+    [0x6f] = { "ddiv", 0 },
+    [0x70] = { "irem", 0 },
+    [0x71] = { "lrem", 0 },
+    [0x72] = { "frem", 0 },
+    [0x73] = { "drem", 0 },
+    [0x74] = { "ineg", 0 },
+    [0x75] = { "lneg", 0 },
+    [0x76] = { "fneg", 0 },
+    [0x77] = { "dneg", 0 },
+    [0x78] = { "ishl", 0 },
+    [0x79] = { "lshl", 0 },
+    [0x7a] = { "ishr", 0 },
+    [0x7b] = { "lshr", 0 },
+    [0x7c] = { "iushr", 0 },
+    [0x7d] = { "lushr", 0 },
+    [0x7e] = { "iand", 0 },
+    [0x7f] = { "land", 0 },
+    [0x80] = { "ior", 0 },
+    [0x81] = { "lor", 0 },
+    [0x82] = { "ixor", 0 },
+    [0x83] = { "lxor", 0 },
+    [0x84] = { "iinc", 2 },
+    [0x85] = { "i2l", 0 },
+    [0x86] = { "i2f", 0 },
+    [0x87] = { "i2d", 0 },
+    [0x88] = { "l2i", 0 },
+    [0x89] = { "l2f", 0 },
+    [0x8a] = { "l2d", 0 },
+    [0x8b] = { "f2i", 0 },
+    [0x8c] = { "f2l", 0 },
+    [0x8d] = { "f2d", 0 },
+    [0x8e] = { "d2i", 0 },
+    [0x8f] = { "d2l", 0 },
+    [0x90] = { "d2f", 0 },
+    [0x91] = { "i2b", 0 },
+    [0x92] = { "i2c", 0 },
+    [0x93] = { "i2s", 0 },
+    [0x94] = { "lcmp", 0 },
+    [0x95] = { "fcmpl", 0 },
+    [0x96] = { "fcmpg", 0 },
+    [0x97] = { "dcmpl", 0 },
+    [0x98] = { "dcmpg", 0 },
+    [0x99] = { "ifeq", 2 },
+    [0x9a] = { "ifne", 2 },
+    [0x9b] = { "iflt", 2 },
+    [0x9c] = { "ifge", 2 },
+    [0x9d] = { "ifgt", 2 },
+    [0x9e] = { "ifle", 2 },
+    [0x9f] = { "if_icmpeq", 2 },
+    [0xa0] = { "if_icmpne", 2 },
+    [0xa1] = { "if_icmplt", 2 },
+    [0xa2] = { "if_icmpge", 2 },
+    [0xa3] = { "if_icmpgt", 2 },
+    [0xa4] = { "if_icmple", 2 },
+    [0xa5] = { "if_acmpeq", 2 },
+    [0xa6] = { "if_acmpne", 2 },
+    [0xa7] = { "goto", 2 },
+    [0xa8] = { "jsr", 2 },
+    [0xa9] = { "ret", 1 },
+    [0xaa] = { "tableswitch", -1 },
+    [0xab] = { "lookupswitch", -1 },
+    [0xac] = { "ireturn", 0 },
+    [0xad] = { "lreturn", 0 },
+    [0xae] = { "freturn", 0 },
+    [0xaf] = { "dreturn", 0 },
+    [0xb0] = { "areturn", 0 },
+    [0xb1] = { "return", 0 },
+    [0xb2] = { "getstatic", 2 },
+    [0xb3] = { "putstatic", 2 },
+    [0xb4] = { "getfield", 2 },
+    [0xb5] = { "putfield", 2 },
+    [0xb6] = { "invokevirtual", 2 },
+    [0xb7] = { "invokespecial", 2 },
+    [0xb8] = { "invokestatic", 2 },
+    [0xb9] = { "invokeinterface", 4 },
+    [0xba] = { "invokedynamic", 4 },
+    [0xbb] = { "new", 2 },
+    [0xbc] = { "newarray", 1 },
+    [0xbd] = { "anewarray", 2 },
+    [0xbe] = { "arraylength", 0 },
+    [0xbf] = { "athrow", 0 },
+    [0xc0] = { "checkcast", 2 },
+    [0xc1] = { "instanceof", 2 },
+    [0xc2] = { "monitorenter", 0 },
+    [0xc3] = { "monitorexit", 0 },
+    [0xc4] = { "wide", -1 },
+    [0xc5] = { "multianewarray", 3 },
+    [0xc6] = { "ifnull", 2 },
+    [0xc7] = { "ifnonnull", 2 },
+    [0xc8] = { "goto_w", 4 },
+    [0xc9] = { "jsr_w", 4 },
+    [0xca] = { "breakpoint", 0 },
+    [0xfe] = { "impdep1", 0 },
+    [0xff] = { "impdep2", 0 }
 };

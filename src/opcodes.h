@@ -2,6 +2,8 @@
 #define OPCODES_H
 
 #include "common.h" // Para u1, u2
+#include "jvm.h"    // Para JVM
+#include "frame.h"  // Para Frame
 
 // Enum com todos os opcodes da JVM
 typedef enum {
@@ -30,7 +32,7 @@ typedef enum {
     dup_x2 = 0x5b, dup2 = 0x5c, dup2_x1 = 0x5d, dup2_x2 = 0x5e, swap = 0x5f,
     iadd = 0x60, ladd = 0x61, fadd = 0x62, dadd = 0x63, isub = 0x64,
     lsub = 0x65, fsub = 0x66, dsub = 0x67, imul = 0x68, lmul = 0x69,
-    fmul = 0x6a, dmul = 0x6b, idiv_ = 0x6c, ldiv_ = 0x6d, fdiv_ = 0x6e, // Renomeado para evitar conflito com função div
+    fmul = 0x6a, dmul = 0x6b, idiv_ = 0x6c, ldiv_ = 0x6d, fdiv_ = 0x6e,
     ddiv_ = 0x6f, irem = 0x70, lrem = 0x71, frem = 0x72, drem_ = 0x73,
     ineg = 0x74, lneg = 0x75, fneg = 0x76, dneg = 0x77, ishl = 0x78,
     lshl = 0x79, ishr = 0x7a, lshr = 0x7b, iushr = 0x7c, lushr = 0x7d,
@@ -41,7 +43,7 @@ typedef enum {
     lcmp = 0x94, fcmpl = 0x95, fcmpg = 0x96, dcmpl = 0x97, dcmpg = 0x98,
     ifeq = 0x99, ifne = 0x9a, iflt = 0x9b, ifge = 0x9c, ifgt = 0x9d,
     ifle = 0x9e, if_icmpeq = 0x9f, if_icmpne = 0xa0, if_icmplt = 0xa1,
-    if_icmpge = 0xa2, if_icmpgt = 0xa3, if_icmple = 0xa4, if_acmpeq = 0xa5, // Corrigido nome
+    if_icmpge = 0xa2, if_icmpgt = 0xa3, if_icmple = 0xa4, if_acmpeq = 0xa5,
     if_acmpne = 0xa6, goto_ = 0xa7, jsr = 0xa8, ret = 0xa9, tableswitch = 0xaa,
     lookupswitch = 0xab, ireturn = 0xac, lreturn = 0xad, freturn = 0xae,
     dreturn = 0xaf, areturn = 0xb0, return_ = 0xb1, getstatic = 0xb2,
@@ -54,13 +56,81 @@ typedef enum {
     breakpoint = 0xca, impdep1 = 0xfe, impdep2 = 0xff
 } Opcode;
 
-// Estrutura para informações sobre cada instrução
 typedef struct {
-    const char* mnemonic; // Nome da instrução
-    int num_operands;   // Quantidade de bytes de operando que seguem o opcode (-1 para tratamento especial)
+    const char* mnemonic;
+    int num_operands;
 } InstructionInfo;
 
-// Tabela global (declarada como extern, definida em um .c)
 extern const InstructionInfo instruction_table[256];
+
+// ============================================
+// Protótipos das funções de implementação dos Opcodes
+// ============================================
+
+// NOP
+void nop_op(JVM* jvm, Frame* frame);
+
+// Constantes & Loads/Stores
+void iconst_m1_op(JVM* jvm, Frame* frame);
+void iconst_0_op(JVM* jvm, Frame* frame);
+void iconst_1_op(JVM* jvm, Frame* frame);
+void iconst_2_op(JVM* jvm, Frame* frame);
+void iconst_3_op(JVM* jvm, Frame* frame);
+void iconst_4_op(JVM* jvm, Frame* frame);
+void iconst_5_op(JVM* jvm, Frame* frame);
+void bipush_op(JVM* jvm, Frame* frame);
+void sipush_op(JVM* jvm, Frame* frame); // <--- ADICIONADO
+void ldc_op(JVM* jvm, Frame* frame);
+
+void iload_op(JVM* jvm, Frame* frame);
+void iload_0_op(JVM* jvm, Frame* frame);
+void iload_1_op(JVM* jvm, Frame* frame);
+void iload_2_op(JVM* jvm, Frame* frame);
+void iload_3_op(JVM* jvm, Frame* frame);
+void istore_op(JVM* jvm, Frame* frame);
+void istore_0_op(JVM* jvm, Frame* frame);
+void istore_1_op(JVM* jvm, Frame* frame);
+void istore_2_op(JVM* jvm, Frame* frame);
+void istore_3_op(JVM* jvm, Frame* frame);
+
+// Referências (Arrays/Objetos)
+void aload_op(JVM* jvm, Frame* frame);
+void aload_0_op(JVM* jvm, Frame* frame);
+void aload_1_op(JVM* jvm, Frame* frame);
+void aload_2_op(JVM* jvm, Frame* frame);
+void aload_3_op(JVM* jvm, Frame* frame);
+void astore_op(JVM* jvm, Frame* frame);
+void astore_0_op(JVM* jvm, Frame* frame);
+void astore_1_op(JVM* jvm, Frame* frame);
+void astore_2_op(JVM* jvm, Frame* frame);
+void astore_3_op(JVM* jvm, Frame* frame);
+
+// Aritmética
+void iadd_op(JVM* jvm, Frame* frame);
+void isub_op(JVM* jvm, Frame* frame);
+void imul_op(JVM* jvm, Frame* frame);
+void iinc_op(JVM* jvm, Frame* frame);
+
+// Controle
+void goto_op(JVM* jvm, Frame* frame);
+void ifne_op(JVM* jvm, Frame* frame);
+void ifle_op(JVM* jvm, Frame* frame);
+void if_icmpgt_op(JVM* jvm, Frame* frame);
+void if_icmple_op(JVM* jvm, Frame* frame);
+void if_icmpge_op(JVM* jvm, Frame* frame);
+void tableswitch_op(JVM* jvm, Frame* frame);
+void lookupswitch_op(JVM* jvm, Frame* frame);
+
+// Métodos, Arrays, Retorno e Objetos
+void invokevirtual_op(JVM* jvm, Frame* frame);
+void getstatic_op(JVM* jvm, Frame* frame);
+void invokestatic_op(JVM* jvm, Frame* frame);
+void invokespecial_op(JVM* jvm, Frame* frame);
+void ireturn_op(JVM* jvm, Frame* frame);
+void return_op(JVM* jvm, Frame* frame);
+
+void multianewarray_op(JVM* jvm, Frame* frame);
+void aaload_op(JVM* jvm, Frame* frame);
+void aastore_op(JVM* jvm, Frame* frame);
 
 #endif // OPCODES_H

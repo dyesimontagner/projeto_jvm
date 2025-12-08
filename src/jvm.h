@@ -159,4 +159,5 @@ void* local_var_get_reference(LocalVariables* locals, int index);
 // Utilitários
 void jvm_print_status(JVM* jvm);
 
+
 #endif // JVM_H
