@@ -41,7 +41,7 @@ static void method_area_entry_destroy(MethodAreaEntry* entry) {
 }
 
 // ============================================================================
-// INICIALIZAÇÃO E FINALIZAÇÃO DA JVM
+// INICIALIZAÇaO E FINALIZAÇaO DA JVM
 // ============================================================================
 
 JVM* jvm_create(void) {
@@ -63,6 +63,9 @@ JVM* jvm_create(void) {
     // Estado inicial
     jvm->running  = false;
     jvm->exit_code = 0;
+
+    // Inicializa tabela de opcodes (engine)
+    engine_init();
 
     printf("JVM inicializada com sucesso.\n");
     return jvm;
@@ -98,7 +101,7 @@ bool jvm_load_class(JVM* jvm, const char* filename) {
 
     printf("Carregando classe: %s\n", filename);
 
-    // Ler o arquivo .class (função da Fase 1)
+    // Ler o arquivo .class (funçao da Fase 1)
     ClassFile* class_file = read_class_file(filename);
     if (!class_file) {
         fprintf(stderr, "Erro: Falha ao ler arquivo .class: %s\n", filename);
@@ -125,7 +128,7 @@ bool jvm_load_class(JVM* jvm, const char* filename) {
         }
     }
 
-    // Se não conseguir pelo constant pool, usa o filename como fallback
+    // Se nao conseguir pelo constant pool, usa o filename como fallback
     if (class_name[0] == '\0') {
         strncpy(class_name, filename, 255);
         class_name[255] = '\0';
@@ -162,7 +165,7 @@ ClassFile* jvm_find_class(JVM* jvm, const char* class_name) {
 }
 
 // ============================================================================
-// EXECUÇÃO
+// EXECUÇaO
 // ============================================================================
 
 bool jvm_execute(JVM* jvm, const char* class_name, const char* method_name) {
@@ -171,7 +174,7 @@ bool jvm_execute(JVM* jvm, const char* class_name, const char* method_name) {
     // Encontrar a classe
     ClassFile* class_file = jvm_find_class(jvm, class_name);
     if (!class_file) {
-        fprintf(stderr, "Erro: Classe '%s' não encontrada!\n", class_name);
+        fprintf(stderr, "Erro: Classe '%s' nao encontrada!\n", class_name);
         return false;
     }
 
@@ -194,15 +197,15 @@ bool jvm_execute(JVM* jvm, const char* class_name, const char* method_name) {
 
     if (!method) {
         fprintf(stderr,
-                "Erro: Método '%s' não encontrado na classe '%s'!\n",
+                "Erro: Método '%s' nao encontrado na classe '%s'!\n",
                 method_name, class_name);
         return false;
     }
 
-    // Criar frame para o método (implementação em frame.c)
+    // Criar frame para o método (implementaçao em frame.c)
     Frame* frame = frame_create(class_file, method);
     if (!frame) {
-        fprintf(stderr, "Erro: Falha ao criar frame para método '%s'!\n",
+        fprintf(stderr, "Erro: Falha ao criar frame para metodo '%s'!\n",
                 method_name);
         return false;
     }
@@ -210,7 +213,7 @@ bool jvm_execute(JVM* jvm, const char* class_name, const char* method_name) {
     // Adicionar frame à pilha
     frame_stack_push(&jvm->frame_stack, frame);
 
-    printf("Executando método '%s' da classe '%s'\n", method_name, class_name);
+    printf("Executando metodo '%s' da classe '%s'\n", method_name, class_name);
     jvm->running = true;
 
     return true;
@@ -220,10 +223,10 @@ void jvm_run(JVM* jvm) {
     if (!jvm || !jvm->running) return;
 
     printf("\n========================================\n");
-    printf("Iniciando execução da JVM...\n");
+    printf("Iniciando execucao da JVM...\n");
     printf("========================================\n\n");
 
-    // Loop principal de execução
+    // Loop principal de execuçao
     while (jvm->running && jvm->frame_stack.top != NULL) {
         Frame* current_frame = jvm->frame_stack.top;
 
@@ -235,15 +238,15 @@ void jvm_run(JVM* jvm) {
             continue;
         }
 
-        // Executar próxima instrução usando o engine (engine.c)
+        // Executar próxima instruçao usando o engine (engine.c)
         execute_bytecode(jvm, current_frame);
     }
 
     jvm->running = false;
 
     printf("\n========================================\n");
-    printf("Execução finalizada.\n");
-    printf("Código de saída: %d\n", jvm->exit_code);
+    printf("Execucao finalizada.\n");
+    printf("Codigo de saida: %d\n", jvm->exit_code);
     printf("========================================\n");
 }
 
@@ -255,7 +258,7 @@ void jvm_print_status(JVM* jvm) {
     if (!jvm) return;
 
     printf("\n=== Status da JVM ===\n");
-    printf("Estado: %s\n", jvm->running ? "Em execução" : "Parada");
+    printf("Estado: %s\n", jvm->running ? "Em execucao" : "Parada");
     printf("Classes carregadas: %d\n", jvm->method_area.class_count);
     printf("Frames na pilha: %d\n", jvm->frame_stack.frame_count);
 
@@ -307,5 +310,5 @@ method_info* jvm_find_method(ClassFile* class_file,
         }
     }
     
-    return NULL; // Método não encontrado
+    return NULL; // Método nao encontrado
 }

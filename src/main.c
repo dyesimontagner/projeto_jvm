@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
     // MODO JVM (EXECUÇÃO)
     // ========================================================================
     else if (strcmp(mode, "-jvm") == 0) {
-        printf("=== MODO: JVM (Execução) ===\n");
+        printf("=== MODO: JVM (Execuao) ===\n");
         
         const char* method_name = (argc >= 4) ? argv[3] : "main";
         
@@ -83,9 +83,13 @@ int main(int argc, char* argv[]) {
         }
         
         // Remover caminho se existir
+        // Remove caminho (suporta '/' e '\\') para extrair apenas o nome da classe
         char* slash = strrchr(class_name, '/');
-        if (slash) {
-            memmove(class_name, slash + 1, strlen(slash));
+        char* bslash = strrchr(class_name, '\\');
+        char* sep = (slash && bslash) ? (slash > bslash ? slash : bslash)
+                                       : (slash ? slash : bslash);
+        if (sep) {
+            memmove(class_name, sep + 1, strlen(sep));
         }
 
         printf("Classe: %s\n", class_name);
@@ -93,7 +97,7 @@ int main(int argc, char* argv[]) {
 
         // Preparar execução do método
         if (!jvm_execute(jvm, class_name, method_name)) {
-            fprintf(stderr, "Erro: Falha ao preparar execução!\n");
+            fprintf(stderr, "Erro: Falha ao preparar execucao!\n");
             jvm_destroy(jvm);
             return 1;
         }
@@ -114,7 +118,7 @@ int main(int argc, char* argv[]) {
     // MODO INVÁLIDO
     // ========================================================================
     else {
-        fprintf(stderr, "Erro: Modo inválido '%s'\n\n", mode);
+        fprintf(stderr, "Erro: Modo invalido '%s'\n\n", mode);
         print_usage(argv[0]);
         return 1;
     }

@@ -11,7 +11,7 @@
 
 static u1 read_u1(Frame* f) { return f->code[f->pc++]; }
 
-static int16_t read_s2(Frame* f) {
+int16_t read_s2(Frame* f) {
     u1 b1 = read_u1(f);
     u1 b2 = read_u1(f);
     return (int16_t)((b1 << 8) | b2);
