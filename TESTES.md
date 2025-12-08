@@ -4,11 +4,11 @@
 
 | Arquivo | Objetivo | Opcodes Necessários | Status |
 |---------|----------|-------------------|--------|
-| **Mini.java** | Aritmética básica (+ load/store) | iconst, iload, istore, iadd, isub, imul | ✅ RODA |
-| **TestDiv.java** | Divisão inteira | iload, idiv, istore | ✅ RODA |
-| **TestIfEq.java** | Condicional if_icmpeq/if_icmpne | if_icmpeq, if_icmpne | ✅ RODA |
-| **TestLdc.java** | Carregamento de constante (string) | ldc, astore | ✅ RODA |
-| **TestNew.java** | Criação de objeto | new, dup, astore, invokespecial | ✅ RODA |
+| **Mini.java** | Aritmética básica (+ load/store) | iconst, iload, istore, iadd, isub, imul |  RODA |
+| **TestDiv.java** | Divisão inteira | iload, idiv, istore |  RODA |
+| **TestIfEq.java** | Condicional if_icmpeq/if_icmpne | if_icmpeq, if_icmpne |  RODA |
+| **TestLdc.java** | Carregamento de constante (string) | ldc, astore |  RODA |
+| **TestNew.java** | Criação de objeto | new, dup, astore, invokespecial |  RODA |
 | **SimpleLoop.java** | Loop com controle de fluxo | iload, istore, iconst, imul, iadd, goto, if_icmpgt, ireturn | ⏳ PARCIAL (invokestatic não resolve) |
 | **ReturnTest.java** | Chamada de método que retorna valor | bipush, invokestatic, iload, iadd, istore, ireturn | ⏳ PARCIAL (invokestatic placeholder) |
 | **Fibonacci.java** | Recursão (if_icmple + invokestatic) | iload, if_icmple, isub, invokestatic, iadd, ireturn | ⏳ PARCIAL (invokestatic não resolve) |
@@ -16,7 +16,7 @@
 
 ## Opcodes Implementados
 
-### ✅ Completamente Implementados:
+###  Completamente Implementados:
 - **Constantes**: `iconst_m1`, `iconst_0` a `iconst_5`, `bipush`
 - **Carregamento**: `iload`, `iload_0` a `iload_3`, `aload`, `aload_0`
 - **Armazenamento**: `istore`, `istore_0` a `istore_3`, `astore`, `astore_0` a `astore_3`
@@ -29,10 +29,10 @@
 - **Métodos**: `invokespecial` (placeholder), `return`, `ireturn`
 - **Meta**: `nop` (no-op)
 
-### ⏳ Parcialmente Implementados:
+### Parcialmente Implementados:
 - `invokestatic` - Lê operandos mas não chama método (requer resolução de método)
 
-### ❌ Não Implementados:
+### Não Implementados:
 - `getstatic` (acesso a campos estáticos - requer System class integration)
 - `invokevirtual` (chamadas virtuais)
 - Outros opcodes não utilizados pelos testes
