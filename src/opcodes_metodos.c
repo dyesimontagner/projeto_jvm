@@ -45,6 +45,7 @@ static int count_parameters(const char* descriptor) {
 // CONSTANTES (LDC)
 // ============================================================================
 
+// LDC para String, Int e Float. (Long/Double usam ldc2_w em outro arquivo)
 void ldc_op(JVM* jvm, Frame* frame) {
     (void)jvm;
     u1 index = read_u1(frame);
@@ -82,31 +83,52 @@ void ldc_op(JVM* jvm, Frame* frame) {
 
 void getstatic_op(JVM* jvm, Frame* frame) {
     (void)jvm;
-    read_s2(frame); 
-    operand_stack_push_reference(&frame->operand_stack, NULL); 
+    read_s2(frame); // Lê índice (ignoramos pois simulamos System.out)
+    // Empilha uma referência "fictícia" para System.out.
+    // Usamos NULL ou um ponteiro marcador, pois o invokevirtual vai apenas descartá-lo.
+    operand_stack_push_reference(&frame->operand_stack, (void*)0xDEADBEEF); 
 }
 
 void invokevirtual_op(JVM* jvm, Frame* frame) {
     (void)jvm;
-    read_s2(frame); 
+    read_s2(frame); // Lê índice do método
 
     if (frame->operand_stack.top < 0) return;
 
-    StackElement top = frame->operand_stack.elements[frame->operand_stack.top];
+    // Verifica o tipo do elemento no topo da pilha para decidir como imprimir e desempilhar
+    StackElement top_el = frame->operand_stack.elements[frame->operand_stack.top];
     
-    if (top.type == TYPE_REFERENCE) {
+    // NOTA: println(tipo) consome o argumento (Valor) + o objeto (Referência)
+    
+    if (top_el.type == TYPE_DOUBLE) {
+        double val = operand_stack_pop_double(&frame->operand_stack); // Desempilha valor (2 slots)
+        operand_stack_pop_reference(&frame->operand_stack);           // Desempilha objeto (1 slot)
+        printf("%.6f\n", val);
+    }
+    else if (top_el.type == TYPE_LONG) {
+        int64_t val = operand_stack_pop_long(&frame->operand_stack);
+        operand_stack_pop_reference(&frame->operand_stack);
+        printf("%ld\n", val);
+    }
+    else if (top_el.type == TYPE_REFERENCE) {
         char* str = (char*)operand_stack_pop_reference(&frame->operand_stack);
-        operand_stack_pop_reference(&frame->operand_stack); // Pop no objeto
+        operand_stack_pop_reference(&frame->operand_stack);
         printf("%s\n", str ? str : "null");
     } 
-    else if (top.type == TYPE_INT) {
+    else if (top_el.type == TYPE_INT) {
         int32_t val = operand_stack_pop_int(&frame->operand_stack);
-        operand_stack_pop_reference(&frame->operand_stack); // Pop no objeto
+        operand_stack_pop_reference(&frame->operand_stack);
         printf("%d\n", val);
     }
+    else if (top_el.type == TYPE_FLOAT) {
+        float val = operand_stack_pop_float(&frame->operand_stack);
+        operand_stack_pop_reference(&frame->operand_stack);
+        printf("%f\n", val);
+    }
     else {
-        if (frame->operand_stack.top >= 0) frame->operand_stack.top--; 
-        if (frame->operand_stack.top >= 0) frame->operand_stack.top--; 
+        // Fallback genérico para evitar loop infinito na pilha
+        if (frame->operand_stack.top >= 0) frame->operand_stack.top--;
+        operand_stack_pop_reference(&frame->operand_stack); 
     }
 }
 
@@ -127,10 +149,10 @@ void invokestatic_op(JVM* jvm, Frame* frame) {
     u2 name_idx = class_info->info.class_info.name_index;
     char* class_name = (char*)get_utf8_from_pool(name_idx, frame->class_file->constant_pool, frame->class_file->constant_pool_count);
 
-    // 2. Resolver Nome do Método e Descritor (CORRIGIDO AQUI)
+    // 2. Resolver Nome do Método e Descritor
     cp_info* name_type = frame->class_file->constant_pool[name_and_type_idx];
-    u2 m_name_idx = name_type->info.name_and_type_info.name_index; // <-- name_and_type_info
-    u2 m_desc_idx = name_type->info.name_and_type_info.descriptor_index; // <-- name_and_type_info
+    u2 m_name_idx = name_type->info.name_and_type_info.name_index;
+    u2 m_desc_idx = name_type->info.name_and_type_info.descriptor_index;
     
     char* method_name = (char*)get_utf8_from_pool(m_name_idx, frame->class_file->constant_pool, frame->class_file->constant_pool_count);
     char* method_desc = (char*)get_utf8_from_pool(m_desc_idx, frame->class_file->constant_pool, frame->class_file->constant_pool_count);
@@ -167,6 +189,12 @@ void invokestatic_op(JVM* jvm, Frame* frame) {
 void invokespecial_op(JVM* jvm, Frame* frame) {
     (void)jvm;
     read_s2(frame);
+    // Em uma implementação completa, invokespecial (para construtores ou super)
+    // também consome parâmetros e a referência do objeto ('this').
+    // Para este projeto simples, assumimos que init consome apenas 'this'.
+    if (frame->operand_stack.top >= 0) {
+        operand_stack_pop_reference(&frame->operand_stack); // Pop 'this'
+    }
 }
 
 // ============================================================================

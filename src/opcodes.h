@@ -1,11 +1,11 @@
 #ifndef OPCODES_H
 #define OPCODES_H
 
-#include "common.h" // Para u1, u2
-#include "jvm.h"    // Para JVM
-#include "frame.h"  // Para Frame
+#include "common.h"
+#include "jvm.h"
+#include "frame.h"
 
-// Enum com todos os opcodes da JVM
+// Enum com todos os opcodes (Mantenha o seu enum existente, ele parecia correto)
 typedef enum {
     op_nop = 0x00, aconst_null = 0x01, iconst_m1 = 0x02, iconst_0 = 0x03,
     iconst_1 = 0x04, iconst_2 = 0x05, iconst_3 = 0x06, iconst_4 = 0x07,
@@ -79,19 +79,37 @@ void iconst_3_op(JVM* jvm, Frame* frame);
 void iconst_4_op(JVM* jvm, Frame* frame);
 void iconst_5_op(JVM* jvm, Frame* frame);
 void bipush_op(JVM* jvm, Frame* frame);
-void sipush_op(JVM* jvm, Frame* frame); // <--- ADICIONADO
+void sipush_op(JVM* jvm, Frame* frame);
 void ldc_op(JVM* jvm, Frame* frame);
+void ldc2_w_op(JVM* jvm, Frame* frame);
+
+// DOUBLE CONSTANTS
+void dconst_0_op(JVM* jvm, Frame* frame);
+void dconst_1_op(JVM* jvm, Frame* frame);
 
 void iload_op(JVM* jvm, Frame* frame);
 void iload_0_op(JVM* jvm, Frame* frame);
 void iload_1_op(JVM* jvm, Frame* frame);
 void iload_2_op(JVM* jvm, Frame* frame);
 void iload_3_op(JVM* jvm, Frame* frame);
+
+void dload_op(JVM* jvm, Frame* frame);
+void dload_0_op(JVM* jvm, Frame* frame);
+void dload_1_op(JVM* jvm, Frame* frame);
+void dload_2_op(JVM* jvm, Frame* frame);
+void dload_3_op(JVM* jvm, Frame* frame);
+
 void istore_op(JVM* jvm, Frame* frame);
 void istore_0_op(JVM* jvm, Frame* frame);
 void istore_1_op(JVM* jvm, Frame* frame);
 void istore_2_op(JVM* jvm, Frame* frame);
 void istore_3_op(JVM* jvm, Frame* frame);
+
+void dstore_op(JVM* jvm, Frame* frame);
+void dstore_0_op(JVM* jvm, Frame* frame);
+void dstore_1_op(JVM* jvm, Frame* frame);
+void dstore_2_op(JVM* jvm, Frame* frame);
+void dstore_3_op(JVM* jvm, Frame* frame);
 
 // Referências (Arrays/Objetos)
 void aload_op(JVM* jvm, Frame* frame);
@@ -105,32 +123,91 @@ void astore_1_op(JVM* jvm, Frame* frame);
 void astore_2_op(JVM* jvm, Frame* frame);
 void astore_3_op(JVM* jvm, Frame* frame);
 
+// Instruções de Criação e Acesso a Arrays
+void newarray_op(JVM* jvm, Frame* frame);
+void anewarray_op(JVM* jvm, Frame* frame);
+void multianewarray_op(JVM* jvm, Frame* frame);
+
+void iaload_op(JVM* jvm, Frame* frame);
+void laload_op(JVM* jvm, Frame* frame);
+void faload_op(JVM* jvm, Frame* frame);
+void daload_op(JVM* jvm, Frame* frame);
+void aaload_op(JVM* jvm, Frame* frame);
+void baload_op(JVM* jvm, Frame* frame);
+void caload_op(JVM* jvm, Frame* frame);
+void saload_op(JVM* jvm, Frame* frame);
+
+void iastore_op(JVM* jvm, Frame* frame);
+void lastore_op(JVM* jvm, Frame* frame);
+void fastore_op(JVM* jvm, Frame* frame);
+void dastore_op(JVM* jvm, Frame* frame);
+void aastore_op(JVM* jvm, Frame* frame);
+void bastore_op(JVM* jvm, Frame* frame);
+void castore_op(JVM* jvm, Frame* frame);
+void sastore_op(JVM* jvm, Frame* frame);
+
 // Aritmética
 void iadd_op(JVM* jvm, Frame* frame);
 void isub_op(JVM* jvm, Frame* frame);
 void imul_op(JVM* jvm, Frame* frame);
 void iinc_op(JVM* jvm, Frame* frame);
 
-// Controle
+void dadd_op(JVM* jvm, Frame* frame);
+void dsub_op(JVM* jvm, Frame* frame);
+void dmul_op(JVM* jvm, Frame* frame);
+void ddiv_op(JVM* jvm, Frame* frame);
+void drem_op(JVM* jvm, Frame* frame);
+void dneg_op(JVM* jvm, Frame* frame);
+
+// Conversões
+void i2l_op(JVM* jvm, Frame* frame);
+void i2f_op(JVM* jvm, Frame* frame);
+void i2d_op(JVM* jvm, Frame* frame);
+void l2i_op(JVM* jvm, Frame* frame);
+void l2f_op(JVM* jvm, Frame* frame);
+void l2d_op(JVM* jvm, Frame* frame);
+void f2i_op(JVM* jvm, Frame* frame);
+void f2l_op(JVM* jvm, Frame* frame);
+void f2d_op(JVM* jvm, Frame* frame);
+void d2i_op(JVM* jvm, Frame* frame);
+void d2l_op(JVM* jvm, Frame* frame);
+void d2f_op(JVM* jvm, Frame* frame);
+void i2b_op(JVM* jvm, Frame* frame);
+void i2c_op(JVM* jvm, Frame* frame);
+void i2s_op(JVM* jvm, Frame* frame);
+
+// Comparação
+void dcmpl_op(JVM* jvm, Frame* frame);
+void dcmpg_op(JVM* jvm, Frame* frame);
+
+// Controle e Desvios (CORRIGIDO: Lista Completa)
 void goto_op(JVM* jvm, Frame* frame);
+void ifeq_op(JVM* jvm, Frame* frame);
 void ifne_op(JVM* jvm, Frame* frame);
+void iflt_op(JVM* jvm, Frame* frame);
+void ifge_op(JVM* jvm, Frame* frame);
+void ifgt_op(JVM* jvm, Frame* frame);
 void ifle_op(JVM* jvm, Frame* frame);
+void if_icmpeq_op(JVM* jvm, Frame* frame);
+void if_icmpne_op(JVM* jvm, Frame* frame);
+void if_icmplt_op(JVM* jvm, Frame* frame);
+void if_icmpge_op(JVM* jvm, Frame* frame);
 void if_icmpgt_op(JVM* jvm, Frame* frame);
 void if_icmple_op(JVM* jvm, Frame* frame);
-void if_icmpge_op(JVM* jvm, Frame* frame);
+void if_acmpeq_op(JVM* jvm, Frame* frame);
+void if_acmpne_op(JVM* jvm, Frame* frame);
+void ifnull_op(JVM* jvm, Frame* frame);
+void ifnonnull_op(JVM* jvm, Frame* frame);
+
 void tableswitch_op(JVM* jvm, Frame* frame);
 void lookupswitch_op(JVM* jvm, Frame* frame);
 
-// Métodos, Arrays, Retorno e Objetos
+// Métodos, Retorno, etc
 void invokevirtual_op(JVM* jvm, Frame* frame);
 void getstatic_op(JVM* jvm, Frame* frame);
 void invokestatic_op(JVM* jvm, Frame* frame);
 void invokespecial_op(JVM* jvm, Frame* frame);
 void ireturn_op(JVM* jvm, Frame* frame);
 void return_op(JVM* jvm, Frame* frame);
-
-void multianewarray_op(JVM* jvm, Frame* frame);
-void aaload_op(JVM* jvm, Frame* frame);
-void aastore_op(JVM* jvm, Frame* frame);
 
 #endif // OPCODES_H
