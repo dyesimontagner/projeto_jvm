@@ -85,7 +85,7 @@ void getstatic_op(JVM* jvm, Frame* frame) {
     (void)jvm;
     read_s2(frame); // Lê índice (ignoramos pois simulamos System.out)
     // Empilha uma referência "fictícia" para System.out.
-    // Usamos NULL ou um ponteiro marcador, pois o invokevirtual vai apenas descartá-lo.
+    // Usamos um endereço específico para identificar depois.
     operand_stack_push_reference(&frame->operand_stack, (void*)0xDEADBEEF); 
 }
 
@@ -95,14 +95,23 @@ void invokevirtual_op(JVM* jvm, Frame* frame) {
 
     if (frame->operand_stack.top < 0) return;
 
-    // Verifica o tipo do elemento no topo da pilha para decidir como imprimir e desempilhar
+    // Verifica o topo da pilha
     StackElement top_el = frame->operand_stack.elements[frame->operand_stack.top];
     
-    // NOTA: println(tipo) consome o argumento (Valor) + o objeto (Referência)
+    // CORREÇÃO: Verifica se é println() vazio (sem argumentos).
+    // Se o topo for 0xDEADBEEF, significa que o objeto System.out está no topo.
+    if (top_el.type == TYPE_REFERENCE && top_el.value.reference == (void*)0xDEADBEEF) {
+        operand_stack_pop_reference(&frame->operand_stack); // Desempilha o objeto
+        printf("\n"); // Imprime apenas nova linha
+        return;
+    }
+
+    // Se não for o objeto System.out no topo, então é um argumento.
+    // O System.out deve estar logo abaixo dele.
     
     if (top_el.type == TYPE_DOUBLE) {
-        double val = operand_stack_pop_double(&frame->operand_stack); // Desempilha valor (2 slots)
-        operand_stack_pop_reference(&frame->operand_stack);           // Desempilha objeto (1 slot)
+        double val = operand_stack_pop_double(&frame->operand_stack); // Valor
+        operand_stack_pop_reference(&frame->operand_stack);           // Objeto
         printf("%.6f\n", val);
     }
     else if (top_el.type == TYPE_LONG) {
@@ -110,11 +119,6 @@ void invokevirtual_op(JVM* jvm, Frame* frame) {
         operand_stack_pop_reference(&frame->operand_stack);
         printf("%ld\n", val);
     }
-    else if (top_el.type == TYPE_REFERENCE) {
-        char* str = (char*)operand_stack_pop_reference(&frame->operand_stack);
-        operand_stack_pop_reference(&frame->operand_stack);
-        printf("%s\n", str ? str : "null");
-    } 
     else if (top_el.type == TYPE_INT) {
         int32_t val = operand_stack_pop_int(&frame->operand_stack);
         operand_stack_pop_reference(&frame->operand_stack);
@@ -125,8 +129,13 @@ void invokevirtual_op(JVM* jvm, Frame* frame) {
         operand_stack_pop_reference(&frame->operand_stack);
         printf("%f\n", val);
     }
+    else if (top_el.type == TYPE_REFERENCE) {
+        char* str = (char*)operand_stack_pop_reference(&frame->operand_stack);
+        operand_stack_pop_reference(&frame->operand_stack); // Objeto
+        printf("%s\n", str ? str : "null");
+    } 
     else {
-        // Fallback genérico para evitar loop infinito na pilha
+        // Fallback para tipos não tratados
         if (frame->operand_stack.top >= 0) frame->operand_stack.top--;
         operand_stack_pop_reference(&frame->operand_stack); 
     }

@@ -1,8 +1,8 @@
 #include "opcodes.h"
 #include "jvm.h"
 #include "frame.h"
-#include "engine.h" // Para read_u1, read_s2
-#include "heap.h"   // Para heap_criar_array_primitivo
+#include "engine.h" 
+#include "heap.h" 
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -16,7 +16,7 @@ void nop_op(JVM* jvm, Frame* frame) {
 }
 
 // ============================================================================
-// INSTRUÇÕES DE ARRAY (Criação e Acesso)
+// INSTRUÇÕES DE ARRAY (Criação)
 // ============================================================================
 
 // 0xBC - newarray
@@ -60,96 +60,11 @@ void multianewarray_op(JVM* jvm, Frame* frame) {
     operand_stack_push_reference(&frame->operand_stack, matrix);
 }
 
-// --- LOADS (Arrays Primitivos) ---
-
-void iaload_op(JVM* jvm, Frame* frame) {
-    (void)jvm;
-    int32_t index = operand_stack_pop_int(&frame->operand_stack);
-    ObjetoArray* array = (ObjetoArray*)operand_stack_pop_reference(&frame->operand_stack);
-    if (!array || !array->dados) { fprintf(stderr, "NullPointerException\n"); exit(1); }
-    
-    int32_t* dados = (int32_t*)array->dados;
-    operand_stack_push_int(&frame->operand_stack, dados[index]);
+// anewarray stub
+void anewarray_op(JVM* jvm, Frame* frame) { 
+    (void)jvm; (void)frame; 
+    printf("anewarray nao impl.\n"); exit(1); 
 }
-
-void faload_op(JVM* jvm, Frame* frame) {
-    (void)jvm;
-    int32_t index = operand_stack_pop_int(&frame->operand_stack);
-    ObjetoArray* array = (ObjetoArray*)operand_stack_pop_reference(&frame->operand_stack);
-    if (!array || !array->dados) { fprintf(stderr, "NullPointerException\n"); exit(1); }
-    
-    float* dados = (float*)array->dados;
-    operand_stack_push_float(&frame->operand_stack, dados[index]);
-}
-
-// --- STORES (Arrays Primitivos) ---
-
-void iastore_op(JVM* jvm, Frame* frame) {
-    (void)jvm;
-    int32_t value = operand_stack_pop_int(&frame->operand_stack);
-    int32_t index = operand_stack_pop_int(&frame->operand_stack);
-    ObjetoArray* array = (ObjetoArray*)operand_stack_pop_reference(&frame->operand_stack);
-    if (!array || !array->dados) { fprintf(stderr, "NullPointerException\n"); exit(1); }
-
-    int32_t* dados = (int32_t*)array->dados;
-    dados[index] = value;
-}
-
-void fastore_op(JVM* jvm, Frame* frame) {
-    (void)jvm;
-    float value = operand_stack_pop_float(&frame->operand_stack);
-    int32_t index = operand_stack_pop_int(&frame->operand_stack);
-    ObjetoArray* array = (ObjetoArray*)operand_stack_pop_reference(&frame->operand_stack);
-    if (!array || !array->dados) { fprintf(stderr, "NullPointerException\n"); exit(1); }
-
-    float* dados = (float*)array->dados;
-    dados[index] = value;
-}
-
-// --- LOADS/STORES (Arrays de Referência) ---
-
-void aaload_op(JVM* jvm, Frame* frame) {
-    (void)jvm;
-    int32_t index = operand_stack_pop_int(&frame->operand_stack);
-    
-    // Na nossa implementação simplificada do multianewarray, usamos void**.
-    // Mas para arrays reais de objetos, seria ObjetoArray.
-    // Aqui tentamos suportar ambos checando se parece um ponteiro bruto ou ObjetoArray
-    void* ref = operand_stack_pop_reference(&frame->operand_stack);
-    if (!ref) { fprintf(stderr, "NullPointerException\n"); exit(1); }
-
-    // HACK: Assume que se veio de multianewarray é void**, senão é ObjetoArray
-    // Para simplificar: tratamos tudo como void** (array de ponteiros) 
-    // porque heap_criar_array_primitivo aloca bloco único, mas multianewarray aloca ponteiros.
-    // O fibonacci usa primitivos, então isso afeta só o multi.class.
-    // Mantemos a implementação simples do passo anterior para aaload:
-    void** arrayref = (void**)ref; 
-    operand_stack_push_reference(&frame->operand_stack, arrayref[index]);
-}
-
-void aastore_op(JVM* jvm, Frame* frame) {
-    (void)jvm;
-    void* value = operand_stack_pop_reference(&frame->operand_stack);
-    int32_t index = operand_stack_pop_int(&frame->operand_stack);
-    void** arrayref = (void**)operand_stack_pop_reference(&frame->operand_stack);
-    if (!arrayref) { fprintf(stderr, "NullPointerException\n"); exit(1); }
-
-    arrayref[index] = value;
-}
-
-// Stubs para outros tipos (opcionais, mas bons para evitar crash)
-void baload_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("baload nao impl.\n"); exit(1); }
-void caload_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("caload nao impl.\n"); exit(1); }
-void saload_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("saload nao impl.\n"); exit(1); }
-void laload_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("laload nao impl.\n"); exit(1); }
-void daload_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("daload nao impl.\n"); exit(1); }
-
-void bastore_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("bastore nao impl.\n"); exit(1); }
-void castore_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("castore nao impl.\n"); exit(1); }
-void sastore_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("sastore nao impl.\n"); exit(1); }
-void lastore_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("lastore nao impl.\n"); exit(1); }
-void dastore_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("dastore nao impl.\n"); exit(1); }
-void anewarray_op(JVM* jvm, Frame* frame) { (void)jvm; (void)frame; printf("anewarray nao impl.\n"); exit(1); }
 
 // ============================================================================
 // TABELA DE INSTRUÇÕES (Para exibidor)
