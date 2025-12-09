@@ -1,5 +1,4 @@
 #include "jvm.h"
-//#include "frame.h"     // frame_create, frame_destroy, frame_stack_push/pop
 #include "engine.h"    // execute_bytecode
 #include "leitor_class.h" // read_class_file, free_class_file, estruturas da Fase 1
 #include <stdio.h>
@@ -93,14 +92,52 @@ void jvm_destroy(JVM* jvm) {
 // GERENCIAMENTO DE CLASSES
 // ============================================================================
 
+// Busca uma classe já carregada na memória
+ClassFile* jvm_find_class(JVM* jvm, const char* class_name) {
+    if (!jvm || !class_name) return NULL;
+
+    MethodAreaEntry* current = jvm->method_area.classes;
+    while (current != NULL) {
+        if (current->class_name &&
+            strcmp(current->class_name, class_name) == 0) {
+            return current->class_file;
+        }
+        current = current->next;
+    }
+
+    return NULL;
+}
+
 bool jvm_load_class(JVM* jvm, const char* filename) {
     if (!jvm || !filename) return false;
 
+    // 1. CORREÇÃO CRÍTICA: Verifica se a classe JÁ está carregada.
+    // Isso evita recarregar a mesma classe (e o erro de arquivo "fatorial" sem .class)
+    if (jvm_find_class(jvm, filename)) {
+        return true; 
+    }
+
     printf("Carregando classe: %s\n", filename);
 
-    // Ler o arquivo .class (função da Fase 1)
+    // 2. Tenta ler o arquivo .class
     ClassFile* class_file = read_class_file(filename);
+    
+    // Fallback: Se falhar e não tiver extensão .class, tenta adicionar
     if (!class_file) {
+        size_t len = strlen(filename);
+        if (len > 6 && strcmp(filename + len - 6, ".class") != 0) {
+            char* with_ext = malloc(len + 7); // .class + \0
+            sprintf(with_ext, "%s.class", filename);
+            // Tenta ler novamente com a extensão
+            // Nota: read_class_file imprime erro (perror) na primeira falha, 
+            // então você verá um "Erro ao abrir" antes de dar certo aqui.
+            class_file = read_class_file(with_ext);
+            free(with_ext);
+        }
+    }
+
+    if (!class_file) {
+        // Se ainda assim falhar, erro real.
         fprintf(stderr, "Erro: Falha ao ler arquivo .class: %s\n", filename);
         return false;
     }
@@ -146,21 +183,6 @@ bool jvm_load_class(JVM* jvm, const char* filename) {
     return true;
 }
 
-ClassFile* jvm_find_class(JVM* jvm, const char* class_name) {
-    if (!jvm || !class_name) return NULL;
-
-    MethodAreaEntry* current = jvm->method_area.classes;
-    while (current != NULL) {
-        if (current->class_name &&
-            strcmp(current->class_name, class_name) == 0) {
-            return current->class_file;
-        }
-        current = current->next;
-    }
-
-    return NULL;
-}
-
 // ============================================================================
 // EXECUÇÃO
 // ============================================================================
@@ -176,18 +198,24 @@ bool jvm_execute(JVM* jvm, const char* class_name, const char* method_name) {
     }
 
     // Encontrar o método
-    method_info* method = NULL;
-    for (int i = 0; i < class_file->methods_count; i++) {
-        u2 name_idx = class_file->methods[i].name_index;
-        if (name_idx > 0 && name_idx < class_file->constant_pool_count) {
-            const char* mname = get_utf8_from_pool(
-                name_idx,
-                class_file->constant_pool,
-                class_file->constant_pool_count
-            );
-            if (mname && strcmp(mname, method_name) == 0) {
-                method = &class_file->methods[i];
-                break;
+    method_info* method = jvm_find_method(class_file, method_name, NULL); 
+    // Nota: Passamos NULL no descritor pois main é conhecido, 
+    // ou se quisermos ser estritos: "([Ljava/lang/String;)V"
+    
+    if (!method) {
+        // Tenta procurar manualmente se jvm_find_method falhar por falta de descritor
+        for (int i = 0; i < class_file->methods_count; i++) {
+            u2 name_idx = class_file->methods[i].name_index;
+            if (name_idx > 0 && name_idx < class_file->constant_pool_count) {
+                const char* mname = get_utf8_from_pool(
+                    name_idx,
+                    class_file->constant_pool,
+                    class_file->constant_pool_count
+                );
+                if (mname && strcmp(mname, method_name) == 0) {
+                    method = &class_file->methods[i];
+                    break;
+                }
             }
         }
     }
@@ -229,7 +257,7 @@ void jvm_run(JVM* jvm) {
 
         // Verificar se chegou ao fim do código
         if (current_frame->pc >= current_frame->code_length) {
-            printf("Método finalizado.\n");
+            // Em caso de erro de fluxo onde não houve return explícito
             Frame* finished_frame = frame_stack_pop(&jvm->frame_stack);
             frame_destroy(finished_frame);
             continue;
@@ -278,7 +306,7 @@ method_info* jvm_find_method(ClassFile* class_file,
                              const char* method_name, 
                              const char* descriptor) {
     
-    if (!class_file || !method_name || !descriptor) return NULL;
+    if (!class_file || !method_name) return NULL;
 
     // Itera sobre todos os métodos na classe
     for (int i = 0; i < class_file->methods_count; i++) {
@@ -290,20 +318,22 @@ method_info* jvm_find_method(ClassFile* class_file,
             class_file->constant_pool,
             class_file->constant_pool_count
         );
-
-        // Resolve o descritor (assinatura) na Constant Pool
-        const char* mdesc = get_utf8_from_pool(
-            method->descriptor_index,
-            class_file->constant_pool,
-            class_file->constant_pool_count
-        );
         
-        // Compara nome e descritor
-        if (mname && mdesc && 
-            strcmp(mname, method_name) == 0 && 
-            strcmp(mdesc, descriptor) == 0) {
-            
-            return method; // Método encontrado
+        // Compara nome
+        if (mname && strcmp(mname, method_name) == 0) {
+            // Se o descritor foi fornecido, verifica ele também
+            if (descriptor) {
+                const char* mdesc = get_utf8_from_pool(
+                    method->descriptor_index,
+                    class_file->constant_pool,
+                    class_file->constant_pool_count
+                );
+                if (mdesc && strcmp(mdesc, descriptor) == 0) {
+                    return method;
+                }
+            } else {
+                return method; // Encontrou pelo nome (sem verificar descritor)
+            }
         }
     }
     
